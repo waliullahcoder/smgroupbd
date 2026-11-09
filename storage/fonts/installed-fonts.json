@@ -1,0 +1,38 @@
+{
+    "pt serif": {
+        "italic": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/pt_serif_italic_f9b6598cf7d0419a014cfb138cca32d8",
+        "bold_italic": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/pt_serif_bold_italic_a5b4d598a1a99da44e2320dde5f663d5",
+        "normal": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/pt_serif_normal_b504b7d2db909ef4d76100e1ec28b578",
+        "bold": "pt_serif_bold_23708553f1de70cacb300fe34d5b01eb"
+    },
+    "solaimanlipi": {
+        "bold": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/solaimanlipi_bold_b800784b8d472ef291f94c9ea0f8689d",
+        "normal": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/solaimanlipi_normal_81112c68274345503d73eb416ad02f7c",
+        "100": "solaimanlipi_100_61f2290c6d3c48f26393729895268a81"
+    },
+    "glyphicons halflings": {
+        "normal": "glyphicons_halflings_normal_5eb770d49f33dc5cbd8e4ba1244adab4"
+    },
+    "noto sans bengali": {
+        "100": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_100_3dfa1960d3cc7d17162f7eee0a52dae4",
+        "200": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_200_f201194c853cff3dfefbec794e33c392",
+        "300": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_300_eefac888a4a9dc988f9c3254bbf9c9ce",
+        "normal": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_normal_542ec1ea18f225b6ade9a2ca3e1d19af",
+        "500": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_500_fdc7d86a17e827871e65b4d1a391d9df",
+        "600": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_600_aab783dbe1b7d8e15647f965725153f5",
+        "bold": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_bold_af66e0edcf4032410da861b5d5d294f6",
+        "800": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_sans_bengali_800_7da9a0a82f9fbb256d9d4df02fa15a22",
+        "900": "noto_sans_bengali_900_181a1a0699873698c0346e9fbe15a496"
+    },
+    "noto serif bengali": {
+        "100": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_100_b0860f13cfc9160e88901128959c830b",
+        "200": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_200_8001e7754859ef5ab580406f028dcebe",
+        "300": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_300_034a990ee186a334c6583d2338b85888",
+        "normal": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_normal_71ab757a64de1457c3c2ce13b25e52ce",
+        "500": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_500_5d6df1f2b561a192ddf258f443cade78",
+        "600": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_600_f77da5b597ab13cace7e398d55cff916",
+        "bold": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_bold_dec399342c5644fa741413dbc3d735b9",
+        "800": "\/home\/technopa\/domains\/proerp.technoparkbd.com\/public_html\/storage\/fonts\/noto_serif_bengali_800_d5df2bc3ee7fee9703c7b77bd3ed0528",
+        "900": "noto_serif_bengali_900_9e4da0542d72a8f3195be34388c1652d"
+    }
+}

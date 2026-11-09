@@ -1,0 +1,62 @@
+[24-Oct-2023 23:34:40 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame/FrameTree.php on line 242
+[24-Oct-2023 23:34:49 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame.php on line 184
+[26-Oct-2023 07:12:22 UTC] PHP Warning:  require(/home/bontonfo/public_html/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:12:22 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bontonfo/public_html/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bontonfo/public_html/public/index.php:34
+Stack trace:
+#0 {main}
+  thrown in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:53:52 UTC] PHP Warning:  require(/home/bontonfo/public_html/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:53:52 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bontonfo/public_html/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bontonfo/public_html/public/index.php:34
+Stack trace:
+#0 {main}
+  thrown in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:56:41 UTC] PHP Warning:  require(/home/bontonfo/public_html/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:56:41 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bontonfo/public_html/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bontonfo/public_html/public/index.php:34
+Stack trace:
+#0 {main}
+  thrown in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:59:05 UTC] PHP Warning:  require(/home/bontonfo/public_html/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 07:59:05 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/bontonfo/public_html/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/bontonfo/public_html/public/index.php:34
+Stack trace:
+#0 {main}
+  thrown in /home/bontonfo/public_html/public/index.php on line 34
+[26-Oct-2023 16:21:34 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame/FrameTree.php on line 242
+[26-Oct-2023 16:21:56 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777248 bytes) in /home/bontonfo/public_html/vendor/maennchen/zipstream-php/src/File.php on line 332
+[30-Oct-2023 13:06:54 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:06:54 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:07:25 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:07:55 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:49:50 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:50:32 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 13:52:25 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 14:15:03 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 14:19:38 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 14:33:54 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:26:16 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:27:15 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:27:49 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:30:36 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:32:42 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:33:43 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:36:04 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[30-Oct-2023 16:48:48 Asia/Dhaka] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /home/bontonfo/public_html/vendor/symfony/polyfill-mbstring/Mbstring.php on line 660
+[31-Oct-2023 10:11:44 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame/FrameTree.php on line 242
+[01-Nov-2023 23:28:31 Asia/Dhaka] PHP Fatal error:  Cannot declare class App\DataTables\ReturnSummaryDataTable, because the name is already in use in /home/bontonfo/public_html/app/DataTables/ReturnHistoryDataTable.php on line 14
+[01-Nov-2023 23:28:32 Asia/Dhaka] PHP Fatal error:  Cannot declare class App\DataTables\ReturnSummaryDataTable, because the name is already in use in /home/bontonfo/public_html/app/DataTables/ReturnHistoryDataTable.php on line 14
+[01-Nov-2023 23:28:33 Asia/Dhaka] PHP Fatal error:  Cannot declare class App\DataTables\ReturnSummaryDataTable, because the name is already in use in /home/bontonfo/public_html/app/DataTables/ReturnHistoryDataTable.php on line 14
+[02-Nov-2023 10:05:08 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/barryvdh/laravel-debugbar/src/DataCollector/QueryCollector.php on line 285
+[02-Nov-2023 10:05:38 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/barryvdh/laravel-debugbar/src/DataCollector/QueryCollector.php on line 285
+[02-Nov-2023 10:06:03 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/barryvdh/laravel-debugbar/src/DataCollector/QueryCollector.php on line 367
+[02-Nov-2023 10:07:27 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 1720320 bytes) in /home/bontonfo/public_html/storage/framework/views/40b1983fc3e53f85c4ce139c16b73416.php on line 57
+[02-Nov-2023 10:07:59 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/barryvdh/laravel-debugbar/src/DataCollector/QueryCollector.php on line 267
+[07-Nov-2023 13:35:00 Asia/Dhaka] PHP Fatal error:  Cannot use isset() on the result of an expression (you can use "null !== expression" instead) in /home/bontonfo/public_html/storage/framework/views/f2992b8b9e94b0883cbecccc6d29fcfb.php on line 56
+[07-Nov-2023 13:35:51 Asia/Dhaka] PHP Fatal error:  Cannot use isset() on the result of an expression (you can use "null !== expression" instead) in /home/bontonfo/public_html/storage/framework/views/f2992b8b9e94b0883cbecccc6d29fcfb.php on line 56
+[08-Nov-2023 14:00:18 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame.php on line 184
+[08-Nov-2023 14:00:43 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777248 bytes) in /home/bontonfo/public_html/vendor/maennchen/zipstream-php/src/File.php on line 332
+[08-Nov-2023 14:02:54 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777248 bytes) in /home/bontonfo/public_html/vendor/maennchen/zipstream-php/src/File.php on line 332
+[08-Nov-2023 14:08:44 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777248 bytes) in /home/bontonfo/public_html/vendor/maennchen/zipstream-php/src/File.php on line 332
+[08-Nov-2023 14:26:19 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 16777248 bytes) in /home/bontonfo/public_html/vendor/maennchen/zipstream-php/src/File.php on line 332
+[08-Nov-2023 14:42:43 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /home/bontonfo/public_html/vendor/dompdf/dompdf/src/Frame/FrameTree.php on line 242
+[21-Apr-2025 15:51:08 Asia/Dhaka] PHP Fatal error:  Class App\Printing\CustomDummyConnector contains 1 abstract method and must therefore be declared abstract or implement the remaining methods (Mike42\Escpos\PrintConnectors\PrintConnector::__destruct) in /home/amaderpo/demo.woltrust.org/app/Printing/CustomDummyConnector.php on line 7
+[21-Apr-2025 16:43:16 Asia/Dhaka] PHP Fatal error:  Class App\Services\BufferPrintConnector contains 2 abstract methods and must therefore be declared abstract or implement the remaining methods (Mike42\Escpos\PrintConnectors\PrintConnector::__destruct, Mike42\Escpos\PrintConnectors\PrintConnector::read) in /home/amaderpo/demo.woltrust.org/app/Services/BufferPrintConnector.php on line 7
+[21-Apr-2025 16:43:36 Asia/Dhaka] PHP Fatal error:  Class App\Services\BufferPrintConnector contains 2 abstract methods and must therefore be declared abstract or implement the remaining methods (Mike42\Escpos\PrintConnectors\PrintConnector::__destruct, Mike42\Escpos\PrintConnectors\PrintConnector::read) in /home/amaderpo/demo.woltrust.org/app/Services/BufferPrintConnector.php on line 7
