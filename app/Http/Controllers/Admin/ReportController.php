@@ -2637,7 +2637,7 @@ class ReportController extends Controller
         $filter_link = Route('admin.online-sales-history.index');
         $areas = Area::where('status', 1)->orderBy('name', 'asc')->get();
         $products = Product::where('status', 1)->orderBy('name', 'asc')->get();
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
 
         $report_type = $request->report_type;
         if ($report_type == 'product_summary') {
@@ -3666,7 +3666,7 @@ class ReportController extends Controller
             $query->where('id', Auth::user()->id);
         }
         $staffs = $query->orderBy('name', 'asc')->get();
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         $filter_link = Route('admin.order-list.index');
 
         if ($request->report_type == 'summary') {
@@ -3746,7 +3746,7 @@ class ReportController extends Controller
         }
         $title = 'Required Product';
         $filter_link = Route('admin.required-product.index');
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.reports.required_product.index', compact('title', 'filter_link', 'stores', 'data'));
     }
 
@@ -3778,7 +3778,7 @@ class ReportController extends Controller
         }
         $title = 'Areawise Order Report';
         $filter_link = Route('admin.areawise-orders.index');
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.reports.areawise_orders.index', compact('title', 'filter_link', 'data', 'stores'));
     }
 
@@ -3918,7 +3918,7 @@ class ReportController extends Controller
 
         $filter_link = Route('admin.area-wise-sales-statement.index');
         $title = 'Area Wise Sales Statement';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         $query = Area::where('status', 1);
         if ($request->store_id) {
             $area_ids = StoreArea::where('store_id', $request->store_id)->pluck('area_id')->toArray();
@@ -3994,7 +3994,7 @@ class ReportController extends Controller
 
         $filter_link = Route('admin.store-wise-sales-statement.index');
         $title = 'Store Wise Sales Statement';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return $dataTable->render('admin.reports.store_wise_sales_summary.index', compact('title', 'filter_link', 'stores'));
     }
 
@@ -4057,7 +4057,7 @@ class ReportController extends Controller
 
         $title = 'Monthly Statement';
         $filter_link = Route('admin.monthly-statement.index');
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.reports.monthly_statement.index', compact('filter_link', 'title', 'stores'));
     }
 
@@ -4088,7 +4088,7 @@ class ReportController extends Controller
         }
         $title = 'Storewise Order Report';
         $filter_link = Route('admin.storewise-orders.index');
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.reports.storewise_orders.index', compact('title', 'filter_link', 'data', 'stores'));
     }
 
@@ -4234,7 +4234,7 @@ class ReportController extends Controller
 
         $filter_link = Route('admin.deliveryman-delivery-statement.index');
         $title = 'Delivery Man Delivery Statement';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         $query = DeliveryMan::where('status', 1);
         if ($request->store_id) {
             $query->where('store_id', $request->store_id);

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Lifting extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['company_id', 'branch_id', 'remarks','vendor_id', 'coa_setup_id', 'lifting_no', 'product_type', 'payment_type', 'voucher_no', 'lifting_date', 'total_cost', 'discount','tax', 'net_amount', 'total_paid', 'return_amount', 'return_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['company_id', 'branch_id', 'remarks','vendor_id', 'coa_setup_id', 'lifting_no', 'product_type', 'payment_type', 'voucher_no', 'lifting_date', 'total_cost', 'discount','tax','tax_amount', 'net_amount', 'total_paid', 'return_amount', 'return_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
 
     // protected static function booted()
     // {

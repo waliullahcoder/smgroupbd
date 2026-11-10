@@ -34,7 +34,7 @@ class OrderCollectionController extends Controller
 
         $orders = Order::with('area')->where('status', 'Delivered')->where('collected', 0)->get();
         $title = 'Bulk Collection';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         $disable_back = true;
         return view('admin.order_collection.create', compact('title', 'stores', 'disable_back', 'orders'));
     }

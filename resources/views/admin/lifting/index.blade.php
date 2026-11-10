@@ -11,7 +11,7 @@
             <thead>
                     <tr class="text-nowrap">
                         <th width="3"></th>
-                        <th>Payment Type</th>
+                        <th>Remarks</th>
                         <th>Purchase No</th>
                         <th>Purchase Date</th>
                         <th>Vendor</th>
@@ -73,8 +73,8 @@
                     width: '3'
                 },
                 {
-                    data: 'payment_type',
-                    name: 'payment_type',
+                    data: 'remarks',
+                    name: 'remarks',
                     className: "text-capitalize"
                 },
                 {

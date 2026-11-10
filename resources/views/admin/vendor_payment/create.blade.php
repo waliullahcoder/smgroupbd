@@ -2,6 +2,24 @@
 
 @section('content')
     <div class="row g-3">
+        <div class="col-lg-6 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
+                <option value=""></option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}">{{ $company->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-lg-6 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required disabled>
+                <option value=""></option>
+            </select>
+        </div>
         <div class="col-md-4 col-sm-6">
             <label for="vendor_id" class="form-label"><b>Vendor <span class="text-danger">*</span></b></label>
             <select name="vendor_id" id="vendor_id" class="select form-select" data-placeholder="Select Vendor" required>
@@ -53,8 +71,9 @@
         <div class="col-md-4 col-sm-6">
             <label for="type" class="form-label"><b>Type <span class="text-danger">*</span></b></label>
             <select name="type" id="type" class="select form-select" required>
+                 <option value="payment" {{ old('type') && old('type') == 'payment' ? 'selected' : '' }}>Payment</option>
                 <option value="advance" {{ old('type') && old('type') == 'advance' ? 'selected' : '' }}>Advance</option>
-                <option value="payment" {{ old('type') && old('type') == 'payment' ? 'selected' : '' }}>Invoice</option>
+               
                 <option value="adjust" {{ old('type') && old('type') == 'adjust' ? 'selected' : '' }}>Adjust</option>
             </select>
         </div>
@@ -72,11 +91,7 @@
             <input type="text" class="form-control" id="advance" name="advance" placeholder="Advance" readonly
                 value="0">
         </div>
-        {{-- <div class="col-md-4 col-sm-6">
-            <label for="balance" class="form-label"><b>Balance</b></label>
-            <input type="text" class="form-control" id="balance" name="balance" placeholder="Balance" readonly
-                value="{{ old('balance') ? old('balance') : 0 }}">
-        </div> --}}
+       
         <div class="col-md-4 col-sm-6">
             <label for="total_paid" class="form-label"><b>Total Payment</b></label>
             <input type="text" class="form-control" id="total_paid" name="total_paid" value="0"
@@ -373,4 +388,33 @@
             }
         });
     </script>
+@endpush
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

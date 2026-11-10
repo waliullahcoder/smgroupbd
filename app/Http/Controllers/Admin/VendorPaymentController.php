@@ -8,6 +8,7 @@ use App\Models\AccountTransactionAuto;
 use App\Models\AdminSetting;
 use App\Models\CoaSetup;
 use App\Models\Company;
+use App\Models\Branch;
 use App\Models\Lifting;
 use App\Models\Scopes\CompanyScope;
 use App\Models\Vendor;
@@ -90,58 +91,6 @@ class VendorPaymentController extends Controller
      */
     public function create(Request $request)
     {
-        // $returns = LiftingReturnList::get();
-        // foreach ($returns as $data) {
-        //     $data->update(['lifting_id' => $data->lifting_product->lifting_id]);
-        // }
-        // return;
-
-        // $purchases = \App\Models\LiftingProduct::get();
-        // foreach ($purchases as $item) {
-        //     $net_amount = $item->total_amount - $item->discount;
-        //     $item->update([
-        //         'net_amount' => $net_amount,
-        //         'return_amount' => ($net_amount / $item->qty) * $item->return_qty
-        //     ]);
-        // }
-        // return;
-
-        // $purchases = Lifting::with('products')->get();
-        // foreach ($purchases as $item) {
-        //     $item->update([
-        //         'net_amount' => $item->total_cost - $item->discount
-        //     ]);
-        // }
-        // return;
-
-        // DB::transaction(function () {
-        //     $returns = LiftingReturn::get();
-        //     foreach ($returns as $data) {
-        //         $previous_payment = 0;
-        //         $purchases = Lifting::whereIn('id', $data->list->pluck('lifting_id')->toArray())->get();
-        //         foreach ($purchases as $item) {
-        //             $balance = $item->total_paid + $item->return_amount - $item->net_amount;
-        //             $previous_payment +=  $balance > 0 ? $balance : 0;
-        //         }
-
-        //         if ($previous_payment > 0) {
-        //             $payment_no = $this->paymentNo();
-        //             VendorPayment::create([
-        //                 'company_id' => Auth::user()->company_id ?? 1,
-        //                 'vendor_id' => $data->vendor_id,
-        //                 'lifting_return_id' => $data->id,
-        //                 'payment_no' => $payment_no,
-        //                 'payment_date' => date('Y-m-d', strtotime($data->date)),
-        //                 'payment_type' => 'return',
-        //                 'type' => 'return',
-        //                 'amount' => $previous_payment,
-        //                 'remarks' => 'Paid on Return Products',
-        //                 'created_by' => Auth::user()->id,
-        //             ]);
-        //         }
-        //     }
-        // });
-        // return;
 
         if ($request->ajax() && $request->has('get_heads')) {
             if ($request->type == 'Cash') {
@@ -180,7 +129,9 @@ class VendorPaymentController extends Controller
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand');
         })->get();
-        return view('admin.vendor_payment.create', compact('title', 'vendors', 'payment_no', 'cash_heads'));
+         $companies = Company::orderBy('name', 'asc')->get();
+
+        return view('admin.vendor_payment.create', compact('title', 'vendors', 'payment_no', 'cash_heads','companies'));
     }
 
     /**
@@ -209,7 +160,8 @@ class VendorPaymentController extends Controller
         DB::transaction(function () use ($request) {
             $payment_no = $this->paymentNo();
             $vendor_payment = VendorPayment::create([
-                'company_id' => Auth::user()->company_id ?? 1,
+                'company_id' => $request->company_id,
+                'branch_id' => $request->project_id,
                 'vendor_id' => $request->vendor_id,
                 'payment_no' => $payment_no,
                 'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
@@ -385,7 +337,12 @@ class VendorPaymentController extends Controller
             })
             ->get();
 
-        return view('admin.vendor_payment.edit', compact('title', 'data', 'link', 'vendors', 'cash_heads', 'selected_head', 'due', 'advance', 'purchases'));
+              $companies = Company::orderBy('name', 'asc')->get();
+            $projects = Branch::where('company_id', $data->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('admin.vendor_payment.edit', compact('title', 'data', 'link', 'vendors', 'cash_heads', 'selected_head', 'due', 'advance', 'purchases','companies','projects'));
     }
 
     /**
@@ -423,6 +380,8 @@ class VendorPaymentController extends Controller
             VendorPaymentData::where('vendor_payment_id', $id)->delete();
 
             $vendor_payment->update([
+                'company_id' => $request->company_id,
+                'branch_id' => $request->project_id,
                 'vendor_id' => $request->vendor_id,
                 'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
                 'payment_type' => $request->payment_type,

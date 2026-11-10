@@ -17,7 +17,7 @@ class AdminSettingController extends Controller
     public function index()
     {
         $data = AdminSetting::first();
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.admin_setting.edit', compact('data', 'stores'));
     }
 

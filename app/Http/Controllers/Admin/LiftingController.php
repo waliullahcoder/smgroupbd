@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use ZipArchive;
 use Carbon\Carbon;
 use App\Models\Store;
+use App\Models\Branch;
 use App\Models\Vendor;
 use App\Models\Company;
 use App\Models\Lifting;
@@ -160,7 +161,10 @@ class LiftingController extends Controller
                         'company_id'   => $request->company_id,
                         'branch_id'    => $request->project_id,
                         'store_id'     => $request->store_id,
+                        'remarks'     => $request->remarks,
                         'vendor_id'    => $request->vendor_id,
+                        'tax'    => $request->tax,
+                        'tax_amount'    => $request->tax_amount,
                         'coa_setup_id' => $request->coa_setup_id,
                         'lifting_no'   => $lifting_no,
                         'voucher_no'   => $request->voucher_no,
@@ -261,6 +265,26 @@ class LiftingController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
+    
+
+    public function showDocument(string $id)
+    {
+        $lifting_documents =  LiftingDocument::where('lifting_id', $id)->get();
+        $zip = new ZipArchive();
+        $fileName = 'downloads.zip';
+        // Add File in ZipArchive
+        if ($zip->open(public_path($fileName), ZipArchive::CREATE) === TRUE) {
+            foreach ($lifting_documents as $file) {
+                $path =  public_path($file->document);
+                $relativeName = basename($path);
+                $zip->addFile($path, $relativeName);
+            }
+        }
+        // Close ZipArchive
+        $zip->close();
+        return response()->download($fileName);
+    }
+
     public function edit(Request $request, string $id)
     {
         if ($request->ajax() && $request->get_product) {
@@ -296,25 +320,13 @@ class LiftingController extends Controller
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand')->orWhere('head_name', 'Cash In Bank');
         })->get();
-        return view('admin.lifting.edit', compact('title', 'vendors', 'stores', 'data', 'lifting_products', 'link', 'products', 'cash_heads'));
-    }
+       $companies = Company::orderBy('name', 'asc')->get();
+        $projects  = Branch::where('company_id', $data->company_id)->orderBy('name', 'asc')->get(['id', 'name']);
 
-    public function showDocument(string $id)
-    {
-        $lifting_documents =  LiftingDocument::where('lifting_id', $id)->get();
-        $zip = new ZipArchive();
-        $fileName = 'downloads.zip';
-        // Add File in ZipArchive
-        if ($zip->open(public_path($fileName), ZipArchive::CREATE) === TRUE) {
-            foreach ($lifting_documents as $file) {
-                $path =  public_path($file->document);
-                $relativeName = basename($path);
-                $zip->addFile($path, $relativeName);
-            }
-        }
-        // Close ZipArchive
-        $zip->close();
-        return response()->download($fileName);
+        return view('admin.lifting.edit', compact(
+            'title', 'vendors', 'stores', 'data', 'lifting_products', 'link', 'products', 'cash_heads',
+            'companies', 'projects'
+        ));
     }
 
     /**
@@ -323,224 +335,121 @@ class LiftingController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'lifting_no' => 'required',
-            'lifting_date' => 'required',
-            'vendor_id' => 'required',
-            'product_id' => 'required',
+            'lifting_no'    => 'required',
+            'lifting_date'  => 'required',
+            'company_id'    => 'required',
+            'project_id'    => 'required',
+            'vendor_id'     => 'required',
+            'product_id'    => 'required|array|min:1',
             'lifting_price' => 'required',
-            'quantity' => 'required',
+            'quantity'      => 'required',
         ]);
 
-        $admin_setting = AdminSetting::first();
-        if (@$admin_setting->accounting == 1 && $request->payment_type == 'cash') {
-            $request->validate([
-                'coa_setup_id' => 'required',
-            ]);
-        }
+        try {
+            DB::transaction(function () use ($request, $id) {
+                $lifting      = Lifting::findOrFail($id);
+                $oldStoreId   = $lifting->store_id;
+                $lifting_date = date('Y-m-d', strtotime($request->lifting_date));
 
-        $vendor = Vendor::find($request->vendor_id);
-        if (@$admin_setting->accounting == 1 && is_null($vendor->coa)) {
-            return redirect()->back()->withErrors('Please Setup a vendors account!');
-        }
+                $total_cost     = (float) ($request->total_cost ?? 0);
+                $total_discount = (float) ($request->discount ?? 0);
+                $tax_percent    = (float) ($request->tax ?? 0);
+                $tax_amount     = round(($total_cost - $total_discount) * $tax_percent / 100, 2);
+                $net_amount     = $total_cost - $total_discount + $tax_amount;
 
-        DB::transaction(function () use ($request, $id, $admin_setting) {
-
-            $lifting = Lifting::findOrFail($id);
-            $oldStoreId = $lifting->store_id;
-            $payment = VendorPayment::withTrashed()->where('lifting_id', $id)->first();
-            AccountTransactionAuto::withTrashed()->where('voucher_no', $lifting->lifting_no)->where('voucher_type', 'Product Purchase')->forceDelete();
-            if ($payment) {
-                AccountTransactionAuto::withTrashed()->where('voucher_no', $payment->payment_no)->where('voucher_type', 'Vendor Payment')->forceDelete();
-                $payment->forceDelete();
-            }
-            foreach ($lifting->products as $item) {
-                LiftingReturnList::where('lifting_product_id', $item->id)->forceDelete();
-            }
-
-            // LiftingProduct::where('lifting_id', $id)->delete();
-
-            $lifting->update([
-                'store_id' => $request->store_id,
-                'vendor_id' => $request->vendor_id,
-                'coa_setup_id' => $request->coa_setup_id,
-                'voucher_no' => $request->voucher_no,
-                'payment_type' => $request->payment_type,
-                'lifting_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                'total_cost' => $request->total_cost ?? 0,
-                'discount' => $request->discount ?? 0,
-                'net_amount' => ($request->total_cost ?? 0) - ($request->discount ?? 0),
-                'total_paid' => $request->payment_type == 'cash' ? $request->net_payable : 0.00,
-                'updated_by' => Auth::user()->id,
-            ]);
-
-            $log_data = '';
-            $existingIds = $lifting->products()->pluck('id')->toArray();
-            $updatedIds = [];
-            foreach ($request->product_id as $product_id) {
-                $discount = ($request->discount / $request->total_cost) * $request->amount[$product_id];
-                if ($request->payment_type == 'cash') {
-                    $total_paid = $request->amount[$product_id] - $discount;
-                } else {
-                    $total_paid = 0;
-                }
-
-                $existingItem = $lifting->products()->where('product_id', $product_id)->first();
-                $oldQty = $existingItem ? $existingItem->qty : 0;
-
-                $cartItem = $lifting->products()->updateOrCreate(
-                    ['product_id' => $product_id],
-                    [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'store_id' => $request->store_id,
-                        'vendor_id' => $request->vendor_id,
-                        'product_id' => $product_id,
-                        'total_amount' => $request->amount[$product_id],
-                        'total_paid' => $total_paid,
-                        'lifting_price' => $request->lifting_price[$product_id],
-                        'discount' => $discount,
-                        'net_amount' => $request->amount[$product_id] - $discount,
-                        'expiry_date' => !is_null(@$request->expiry_date[$product_id]) ? date('Y-m-d', strtotime(@$request->expiry_date[$product_id])) : null,
-                        'qty' => $request->quantity[$product_id],
-                        'created_by' => Auth::user()->id,
-                    ]
-                );
-
-                $updatedIds[] = $cartItem->id;
-
-                $diff = $request->quantity[$product_id] - $oldQty;
-                if ($diff != 0 && ($productUpdate = Product::find($product_id))) {
-                    if ($diff > 0) {
-                        $productUpdate->increaseStock(date('Y-m-d', strtotime($request->lifting_date)), $request->store_id, $diff, $request->lifting_price[$product_id], "Purchase #{$lifting->lifting_no}", "Stock increased from purchase update");
-                    } else {
-                        $productUpdate->decreaseStock(date('Y-m-d', strtotime($request->lifting_date)), $oldStoreId, abs($diff), $request->lifting_price[$product_id], "Purchase #{$lifting->lifting_no}", "Stock decreased from purchase update");
-                    }
-                }
-
-
-                $product = Product::where('id', $product_id)->first();
-                $log_data .= ' ' . $product->name . ' ' . $request->quantity[$product_id] . ' ' . $product->attribute->name . ' ';
-            }
-
-            // Remove deleted items & adjust stock
-            $removedIds = array_diff($existingIds, $updatedIds);
-            foreach ($removedIds as $rmId) {
-                $rmItem = $lifting->products()->find($rmId);
-                if ($rmItem && ($oldProduct = Product::find($rmItem->product_id))) {
-                    $oldProduct->decreaseStock(date('Y-m-d', strtotime($request->lifting_date)), $oldStoreId, $rmItem->quantity, $rmItem->unit_price, "Purchase #{$lifting->lifting_no}", "Removed from purchase update");
-                }
-                $rmItem?->delete();
-            }
-
-            $vendor = Vendor::find($request->vendor_id);
-            if ($vendor->coa && @$admin_setting->accounting == 1) {
-                $expense_head = CoaSetup::where('head_type', 'E')->where('head_name', 'Product Purchase')->first();
-                $headCode = collect([
-                    '0' => $expense_head->head_code,
-                    '1' => $vendor->coa->head_code
-                ]);
-
-                $debit_amount = collect([
-                    '0' => $request->net_payable,
-                    '1' => 0.00
-                ]);
-
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $request->net_payable,
-                ]);
-
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'voucher_no' => $lifting->lifting_no,
-                        'voucher_type' => "Product Purchase",
-                        'voucher_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Product Purchase Against Purchase No - ' . $lifting->lifting_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
-                        'created_by' => Auth::user()->id,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ];
-                }
-                AccountTransactionAuto::insert($postData);
-            }
-
-            if ($request->payment_type == 'cash') {
-                $first = date('Y-m-01');
-                $last = new Carbon('last day of this month');
-                $pay_data = VendorPayment::withoutGlobalScope(CompanyScope::class)->withTrashed()->select(['payment_no'])->whereDate('created_at', '>=', $first)->whereDate('created_at', '<=', $last)->orderBy('id', 'desc')->first();
-                if ($pay_data) {
-                    $trim = str_replace("STP", '', $pay_data->payment_no);
-                    $dataPrefix = (int)$trim + 1;
-                    $payment_no = "STP" . $dataPrefix;
-                } else {
-                    $payment_no = "STP" . date('y') . date('m') . '000001';
-                }
-
-                $vendor_payment = VendorPayment::create([
-                    'company_id' => Auth::user()->company_id ?? 1,
-                    'vendor_id' => $request->vendor_id,
-                    'lifting_id' => $lifting->id,
-                    'payment_no' => $payment_no,
-                    'payment_date' => date('Y-m-d', strtotime($request->lifting_date)),
+                $lifting->update([
+                    'company_id'   => $request->company_id,
+                    'branch_id'    => $request->project_id,
+                    'store_id'     => $request->store_id,
+                    'vendor_id'    => $request->vendor_id,
+                    'coa_setup_id' => $request->coa_setup_id,
+                    'voucher_no'   => $request->voucher_no,
                     'payment_type' => $request->payment_type,
-                    'type' => 'payment',
-                    'amount' => $request->total_cost - $request->discount,
-                    'remarks' => 'Cash Purchase',
-                    'created_by' => Auth::user()->id,
+                    'lifting_date' => $lifting_date,
+                    'total_cost'   => $total_cost,
+                    'discount'     => $total_discount,
+                    'tax'          => $tax_percent,
+                    'tax_amount'   => $tax_amount,
+                    'net_amount'   => $net_amount,
+                    'remarks'     => $request->remarks,
+                    'total_paid'   => $request->payment_type == 'cash' ? $net_amount : 0.00,
+                    'updated_by'   => Auth::user()->id,
                 ]);
 
-                VendorPaymentData::create([
-                    'vendor_payment_id' => $vendor_payment->id,
-                    'lifting_id' => $lifting->id,
-                    'paid' => $request->total_cost - $request->discount,
-                ]);
+                $existingIds = $lifting->products()->pluck('id')->toArray();
+                $updatedIds  = [];
 
-                if ($vendor->coa && @$admin_setting->accounting == 1) {
-                    $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                    $headCode = collect([
-                        '0' => $vendor->coa->head_code,
-                        '1' => $cash_head->head_code,
-                    ]);
+                foreach ($request->product_id as $product_id) {
+                    $amount   = (float) $request->amount[$product_id];
+                    $discount = $total_cost > 0 ? ($total_discount / $total_cost) * $amount : 0;
+                    $total_paid = $request->payment_type == 'cash' ? $amount - $discount : 0;
 
-                    $postData = [];
-                    for ($i = 0; $i < $countHead; $i++) {
-                        $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                        $postData[] = [
-                            'company_id' => Auth::user()->company_id ?? 1,
-                            'voucher_no' => $payment_no,
-                            'voucher_type' => "Vendor Payment",
-                            'voucher_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                            'coa_setup_id' => $coa->id,
-                            'coa_head_code' => $headCode[$i],
-                            'narration' => 'Payment Vendor Against PAYMENT NO - ' . $payment_no,
-                            'debit_amount' => $debit_amount[$i],
-                            'credit_amount' => $credit_amount[$i],
-                            'created_by' => Auth::user()->id,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => Carbon::now()
-                        ];
+                    $existingItem = $lifting->products()->where('product_id', $product_id)->first();
+                    $oldQty = $existingItem ? $existingItem->qty : 0;
+
+                    $item = $lifting->products()->updateOrCreate(
+                        ['product_id' => $product_id],
+                        [
+                            'company_id'    => Auth::user()->company_id ?? 1,
+                            'store_id'      => $request->store_id,
+                            'vendor_id'     => $request->vendor_id,
+                            'total_amount'  => $amount,
+                            'total_paid'    => $total_paid,
+                            'lifting_price' => $request->lifting_price[$product_id],
+                            'discount'      => $discount,
+                            'net_amount'    => $amount - $discount,
+                            'expiry_date'   => !empty($request->expiry_date[$product_id])
+                                ? date('Y-m-d', strtotime($request->expiry_date[$product_id]))
+                                : null,
+                            'qty'           => $request->quantity[$product_id],
+                            'created_by'    => Auth::user()->id,
+                        ]
+                    );
+
+                    $updatedIds[] = $item->id;
+
+                    // Stock adjust (sudhu difference)
+                    $diff = $request->quantity[$product_id] - $oldQty;
+                    if ($diff != 0 && ($product = Product::find($product_id))) {
+                        if ($diff > 0) {
+                            $product->increaseStock($lifting_date, $request->store_id, $diff,
+                                $request->lifting_price[$product_id],
+                                "Purchase #{$lifting->lifting_no}", "Stock increased from purchase update");
+                        } else {
+                            $product->decreaseStock($lifting_date, $oldStoreId, abs($diff),
+                                $request->lifting_price[$product_id],
+                                "Purchase #{$lifting->lifting_no}", "Stock decreased from purchase update");
+                        }
                     }
-                    AccountTransactionAuto::insert($postData);
                 }
-            }
 
-            $store = Store::findOrFail($request->store_id);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Purchase',
-                'action' => 'Update',
-                'description' => 'Update purhcase against purchase no ' . $lifting->lifting_no . ' to ' . $store->name . ' products : ' . $log_data . ' on ' . $request->payment_type,
-                'user_id' => Auth::user()->id,
+                // Jei item gulo form theke remove hoyeche
+                foreach (array_diff($existingIds, $updatedIds) as $rmId) {
+                    $rmItem = $lifting->products()->find($rmId);
+                    if ($rmItem && ($oldProduct = Product::find($rmItem->product_id))) {
+                        $oldProduct->decreaseStock($lifting_date, $oldStoreId, $rmItem->qty,
+                            $rmItem->lifting_price,
+                            "Purchase #{$lifting->lifting_no}", "Removed from purchase update");
+                    }
+                    $rmItem?->delete();
+                }
+            });
+
+            return redirect()->route('admin.lifting.index')
+                ->withSuccessMessage('Updated Successfully!');
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Lifting update failed: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
-        });
-        return redirect()->route('admin.lifting.index')->withSuccessMessage('Updated Successfully!');
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrorMessage('Something went wrong! Please try again.');
+        }
     }
 
     /**

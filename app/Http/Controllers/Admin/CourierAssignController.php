@@ -20,7 +20,7 @@ class CourierAssignController extends Controller
         }
 
         $title = 'Courier Assign';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         $disable_back = true;
         return view('admin.courier_assign.create', compact('title', 'stores', 'disable_back'));
     }

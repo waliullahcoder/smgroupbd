@@ -64,7 +64,7 @@ class DeliveryManController extends Controller
             $code = 1;
         }
         $title = 'Add Delivery Man';
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.delivery_man.create', compact('title', 'stores', 'code'));
     }
 
@@ -110,7 +110,7 @@ class DeliveryManController extends Controller
         $title = 'Update Delivery Man';
         $data = DeliveryMan::findOrFail($id);
         $link = Route('admin.delivery-man.update', $id);
-        $stores = Store::where('status', 1)->orderBy('name', 'asc')->get();
+        $stores = Store::where('status', 1)->orderBy('store_name', 'asc')->get();
         return view('admin.delivery_man.edit', compact('title', 'data', 'link', 'stores'));
     }
 
