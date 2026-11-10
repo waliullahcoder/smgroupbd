@@ -11,9 +11,16 @@
             <thead>
                 <tr class="text-nowrap">
                     <th width="3"></th>
-                    <th>Branch</th>
+                    <th>Company</th>
+                    <th>Project</th>
                     <th>Name</th>
-                    <th>Area</th>
+                    <th>Store Name</th>
+                    <th>Item Name</th>
+                    <th>Assign Name</th>
+                    <th>Delivery Qty</th>
+                    <th>Delivery Date</th>
+                    <th>Received Qty</th>
+                    <th>Received Date</th>
                     <th>Status</th>
                     <th width="110" class="text-end">Actions</th>
                 </tr>
@@ -35,7 +42,7 @@
                                 </div>
                             </div>
                         </th>
-                        <th class="text-end" colspan="5">
+                        <th class="text-end" colspan="12">
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
                                 id="bulk_delete" class="btn btn btn-xs btn-danger">Delete</button>
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
@@ -71,9 +78,16 @@
                         width: '3'
                     },
                     {
+                        data: 'company.name',
+                        name: 'company.name',
+                        className: "text-nowrap",
+                        defaultContent: ''
+                    },
+                    {
                         data: 'branch.name',
                         name: 'branch.name',
                         className: "text-nowrap",
+                        defaultContent: ''
                     },
                     {
                         data: 'name',
@@ -81,10 +95,44 @@
                         className: "text-nowrap",
                     },
                     {
-                        data: 'area_names',
-                        name: 'area_names',
-                        orderable: false,
-                        searchable: false,
+                        data: 'store_name',
+                        name: 'store_name',
+                        className: "text-nowrap",
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'item_name',
+                        name: 'item_name',
+                        className: "text-nowrap",
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'assign_name',
+                        name: 'assign_name',
+                        className: "text-nowrap",
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'delivery_qnty',
+                        name: 'delivery_qnty',
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'delivery_date',
+                        name: 'delivery_date',
+                        className: "text-nowrap",
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'received_qnty',
+                        name: 'received_qnty',
+                        defaultContent: ''
+                    },
+                    {
+                        data: 'received_date',
+                        name: 'received_date',
+                        className: "text-nowrap",
+                        defaultContent: ''
                     },
                     {
                         data: 'status',

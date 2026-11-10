@@ -85,7 +85,7 @@ class StaffController extends Controller
         ]);
 
         Staff::create([
-            'company_id' => $request->company_id ?? Auth::user()->company_id,
+            'company_id' => $request->company_id,
             'branch_id' => $request->branch_id,
             'code' => $request->code,
             'name' => $request->name,
@@ -152,7 +152,6 @@ class StaffController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'branch_id' => 'required',
             'code' => 'required',
             'type' => 'required',
             'name' => 'required',
@@ -161,7 +160,7 @@ class StaffController extends Controller
 
         $data = Staff::findOrFail($id);
         $data->update([
-            'company_id' => $request->company_id ?? Auth::user()->company_id,
+            'company_id' => $request->company_id,
             'branch_id' => $request->branch_id,
             'code' => $request->code,
             'name' => $request->name,

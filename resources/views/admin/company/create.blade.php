@@ -2,11 +2,8 @@
 
 @section('content')
     <div class="row g-3">
-        <div class="col-lg-4 col-sm-6">
-            <label for="prefix" class="form-label"><b>Prefix</b></label>
-            <input type="text" class="form-control" id="prefix" name="prefix" value="{{ old('prefix') }}"
-                placeholder="Prefix">
-        </div>
+       <input type="hidden" name="prefix" value="CMP">
+        
         <div class="col-lg-4 col-sm-6">
             <label for="name" class="form-label"><b>Company Name <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="name" name="name" required

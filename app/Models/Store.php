@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\CompanyScope;
+// use App\Models\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Store extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['company_id', 'branch_id', 'code', 'type', 'name', 'address', 'remarks', 'status', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['company_id', 'branch_id', 'store_name', 'item_name', 'assign_name', 'delivery_qnty','delivery_date', 'received_qnty', 'received_date', 'address', 'remarks', 'status', 'created_by', 'updated_by', 'deleted_by'];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function company()
     {

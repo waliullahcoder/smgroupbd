@@ -2,16 +2,7 @@
 
 @section('content')
     <div class="row g-3">
-        <div class="col-lg-4 col-sm-6">
-            <label for="prefix" class="form-label"><b>Prefix <span class="text-danger">*</span></b></label>
-            <input type="text" class="form-control" id="prefix" name="prefix" required
-                value="{{ old('prefix') }}" placeholder="Prefix">
-        </div>
-        <div class="col-lg-4 col-sm-6">
-            <label for="name" class="form-label"><b>Branch Name <span class="text-danger">*</span></b></label>
-            <input type="text" class="form-control" id="name" name="name" required
-                value="{{ old('name') }}" placeholder="Branch Name">
-        </div>
+        <input type="hidden" name="prefix" value="pjct">
         @if (Auth::user()->hasRole('Software Admin'))
             <div class="col-lg-4 col-sm-6">
                 <label for="company_id" class="form-label"><b>Company Name <span class="text-danger">*</span></b></label>
@@ -27,6 +18,12 @@
                 </select>
             </div>
         @endif
+        <div class="col-lg-4 col-sm-6">
+            <label for="name" class="form-label"><b>Project Name <span class="text-danger">*</span></b></label>
+            <input type="text" class="form-control" id="name" name="name" required
+                value="{{ old('name') }}" placeholder="Project Name">
+        </div>
+        
         <div class="col-lg-4 col-sm-6">
             <label for="contact_person" class="form-label"><b>Contact Person <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="contact_person" name="contact_person" required

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\CompanyScope;
+// use App\Models\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,17 +10,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Lifting extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['company_id', 'store_id', 'vendor_id', 'coa_setup_id', 'lifting_no', 'product_type', 'payment_type', 'voucher_no', 'lifting_date', 'total_cost', 'discount', 'net_amount', 'total_paid', 'return_amount', 'return_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['company_id', 'branch_id', 'remarks','vendor_id', 'coa_setup_id', 'lifting_no', 'product_type', 'payment_type', 'voucher_no', 'lifting_date', 'total_cost', 'discount','tax', 'net_amount', 'total_paid', 'return_amount', 'return_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id')->withTrashed();
     }
+     public function project()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id')->withTrashed();
+    }
+
 
     public function vendor()
     {

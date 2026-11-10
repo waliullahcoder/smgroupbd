@@ -27,7 +27,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountTransactionAuto;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\ActionButtons\ActionButtons;
-
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 class LiftingController extends Controller
 {
     /**
@@ -36,7 +37,7 @@ class LiftingController extends Controller
     public function index()
     {
         if (request()->ajax()) {
-            $model = Lifting::with(['company', 'store', 'staff', 'vendor'])->latest('id')->where('product_type', 'Consumer');
+            $model = Lifting::with(['company', 'project', 'staff', 'vendor'])->latest('id')->where('product_type', 'Consumer');
             $type = request('type');
             if (!empty($type) && $type == 'trash') {
                 $model->onlyTrashed();
@@ -126,207 +127,106 @@ class LiftingController extends Controller
         $lifting_no = $this->invoice();
         $vendors = Vendor::where('status', 1)->orderBy('name', 'asc')->get();
         $stores = Store::where('status', 1)->get();
+        $companies = Company::orderBy('name', 'asc')->get();
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand')->orWhere('head_name', 'Cash In Bank');
         })->get();
         $products = Product::where('status', 1)->orderBy('name', 'asc')->get();
-        return view('admin.lifting.create', compact('title', 'lifting_no', 'vendors', 'stores', 'cash_heads', 'products'));
+        return view('admin.lifting.create', compact('title', 'lifting_no', 'vendors', 'stores', 'cash_heads', 'products','companies'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'lifting_no' => 'required',
-            'lifting_date' => 'required',
-            'vendor_id' => 'required',
-            'product_id' => 'required',
-            'lifting_price' => 'required',
-            'quantity' => 'required',
-        ]);
-
-        $admin_setting = AdminSetting::first();
-        if (@$admin_setting->accounting == 1 && $request->payment_type == 'cash') {
+        public function store(Request $request)
+        {
             $request->validate([
-                'coa_setup_id' => 'required',
-            ]);
-        }
-
-        $vendor = Vendor::find($request->vendor_id);
-        if (@$admin_setting->accounting == 1 && is_null($vendor->coa)) {
-            return redirect()->back()->withErrors('Please Setup a vendors account!');
-        }
-
-        DB::transaction(function () use ($request, $admin_setting) {
-            $lifting_no = $this->invoice();
-            $lifting = Lifting::create([
-                'company_id' => Auth::user()->company_id ?? 1,
-                'store_id' => $request->store_id,
-                'vendor_id' => $request->vendor_id,
-                'coa_setup_id' => $request->coa_setup_id,
-                'lifting_no' => $lifting_no,
-                'voucher_no' => $request->voucher_no,
-                'payment_type' => $request->payment_type,
-                'lifting_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                'total_cost' => $request->total_cost ?? 0,
-                'discount' => $request->discount ?? 0,
-                'net_amount' => ($request->total_cost ?? 0) - ($request->discount ?? 0),
-                'total_paid' => $request->payment_type == 'cash' ? $request->net_payable : 0.00,
-                'created_by' => Auth::user()->id,
+                'lifting_no'    => 'required',
+                'lifting_date'  => 'required',
+                'vendor_id'     => 'required',
+                'product_id'    => 'required|array|min:1',
+                'lifting_price' => 'required',
+                'quantity'      => 'required',
             ]);
 
-            $log_data = '';
-            foreach ($request->product_id as $product_id) {
-                $product = Product::where('id', $product_id)->first();
-                $discount = ($request->discount / $request->total_cost) * $request->amount[$product_id];
-                if ($request->payment_type == 'cash') {
-                    $total_paid = $request->amount[$product_id] - $discount;
-                } else {
-                    $total_paid = 0;
-                }
-                LiftingProduct::create([
-                    'lifting_id' => $lifting->id,
-                    'company_id' => Auth::user()->company_id ?? 1,
-                    'store_id' => $request->store_id,
-                    'vendor_id' => $request->vendor_id,
-                    'product_id' => $product_id,
-                    'total_amount' => $request->amount[$product_id],
-                    'total_paid' => $total_paid,
-                    'lifting_price' => $request->lifting_price[$product_id],
-                    'discount' => $discount,
-                    'net_amount' => $request->amount[$product_id] - $discount,
-                    'expiry_date' => !is_null(@$request->expiry_date[$product_id]) ? date('Y-m-d', strtotime(@$request->expiry_date[$product_id])) : null,
-                    'qty' => $request->quantity[$product_id],
-                    'created_by' => Auth::user()->id,
-                ]);
-                $log_data .= ' ' . $product->name . ' ' . $request->quantity[$product_id] . ' ' . $product->attribute->name . ' ';
+            try {
+                DB::transaction(function () use ($request) {
+                    $lifting_no     = $this->invoice();
+                    $total_cost     = (float) ($request->total_cost ?? 0);
+                    $total_discount = (float) ($request->discount ?? 0);
+                    $lifting_date   = date('Y-m-d', strtotime($request->lifting_date));
 
-                if ($productUpdate = Product::find($product_id)) {
-                    $productUpdate->increaseStock(
-                        date('Y-m-d', strtotime($request->lifting_date)),
-                        $request->store_id,
-                        $request->quantity[$product_id],
-                        $request->lifting_price[$product_id],
-                        "Purchase #{$lifting->lifting_no}",
-                        "Stock increased from purchase"
-                    );
-                }
-            }
-
-            $vendor = Vendor::find($request->vendor_id);
-            if ($vendor->coa && @$admin_setting->accounting == 1) {
-                $expense_head = CoaSetup::where('head_type', 'E')->where('head_name', 'Product Purchase')->first();
-                $headCode = collect([
-                    '0' => $expense_head->head_code,
-                    '1' => $vendor->coa->head_code
-                ]);
-
-                $debit_amount = collect([
-                    '0' => $request->net_payable,
-                    '1' => 0.00
-                ]);
-
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $request->net_payable,
-                ]);
-
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'voucher_no' => $lifting->lifting_no,
-                        'voucher_type' => "Product Purchase",
-                        'voucher_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Product Purchase Against Purchase No - ' . $lifting->lifting_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
-                        'created_by' => Auth::user()->id,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ];
-                }
-                AccountTransactionAuto::insert($postData);
-            }
-
-            if ($request->payment_type == 'cash') {
-                $first = date('Y-m-01');
-                $last = new Carbon('last day of this month');
-                $pay_data = VendorPayment::withoutGlobalScope(CompanyScope::class)->withTrashed()->select(['payment_no'])->whereDate('created_at', '>=', $first)->whereDate('created_at', '<=', $last)->orderBy('id', 'desc')->first();
-                if ($pay_data) {
-                    $trim = str_replace("STP", '', $pay_data->payment_no);
-                    $dataPrefix = (int)$trim + 1;
-                    $payment_no = "STP" . $dataPrefix;
-                } else {
-                    $payment_no = "STP" . date('y') . date('m') . '000001';
-                }
-
-                $vendor_payment = VendorPayment::create([
-                    'company_id' => Auth::user()->company_id ?? 1,
-                    'vendor_id' => $request->vendor_id,
-                    'lifting_id' => $lifting->id,
-                    'payment_no' => $payment_no,
-                    'payment_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                    'payment_type' => $request->payment_type,
-                    'type' => 'payment',
-                    'amount' => $request->total_cost - $request->discount,
-                    'remarks' => 'Cash Purchase',
-                    'created_by' => Auth::user()->id,
-                ]);
-
-                VendorPaymentData::create([
-                    'vendor_payment_id' => $vendor_payment->id,
-                    'lifting_id' => $lifting->id,
-                    'paid' => $request->total_cost - $request->discount,
-                ]);
-
-                if ($vendor->coa && @$admin_setting->accounting == 1) {
-                    $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                    $headCode = collect([
-                        '0' => $vendor->coa->head_code,
-                        '1' => $cash_head->head_code,
+                    $lifting = Lifting::create([
+                        'company_id'   => $request->company_id,
+                        'branch_id'    => $request->project_id,
+                        'store_id'     => $request->store_id,
+                        'vendor_id'    => $request->vendor_id,
+                        'coa_setup_id' => $request->coa_setup_id,
+                        'lifting_no'   => $lifting_no,
+                        'voucher_no'   => $request->voucher_no,
+                        'payment_type' => $request->payment_type,
+                        'lifting_date' => $lifting_date,
+                        'total_cost'   => $total_cost,
+                        'discount'     => $total_discount,
+                        'net_amount'   => $total_cost - $total_discount,
+                        'total_paid'   => $request->payment_type == 'cash' ? $request->net_payable : 0.00,
+                        'created_by'   => Auth::user()->id,
                     ]);
 
-                    $postData = [];
-                    for ($i = 0; $i < $countHead; $i++) {
-                        $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                        $postData[] = [
-                            'company_id' => Auth::user()->company_id ?? 1,
-                            'voucher_no' => $payment_no,
-                            'voucher_type' => "Vendor Payment",
-                            'voucher_date' => date('Y-m-d', strtotime($request->lifting_date)),
-                            'coa_setup_id' => $coa->id,
-                            'coa_head_code' => $headCode[$i],
-                            'narration' => 'Payment Vendor Against PAYMENT NO - ' . $payment_no,
-                            'debit_amount' => $debit_amount[$i],
-                            'credit_amount' => $credit_amount[$i],
-                            'created_by' => Auth::user()->id,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => Carbon::now()
-                        ];
+                    foreach ($request->product_id as $product_id) {
+                        $product = Product::findOrFail($product_id);
+                        $amount  = (float) $request->amount[$product_id];
+
+                        // total_cost 0 hole division by zero na hoy
+                        $discount = $total_cost > 0 ? ($total_discount / $total_cost) * $amount : 0;
+                        $total_paid = $request->payment_type == 'cash' ? $amount - $discount : 0;
+
+                        LiftingProduct::create([
+                            'lifting_id'    => $lifting->id,
+                            'company_id'    => Auth::user()->company_id ?? 1,
+                            'store_id'      => $request->store_id,
+                            'vendor_id'     => $request->vendor_id,
+                            'product_id'    => $product_id,
+                            'total_amount'  => $amount,
+                            'total_paid'    => $total_paid,
+                            'lifting_price' => $request->lifting_price[$product_id],
+                            'discount'      => $discount,
+                            'net_amount'    => $amount - $discount,
+                            'expiry_date'   => !empty($request->expiry_date[$product_id])
+                                ? date('Y-m-d', strtotime($request->expiry_date[$product_id]))
+                                : null,
+                            'qty'           => $request->quantity[$product_id],
+                            'created_by'    => Auth::user()->id,
+                        ]);
+
+                        $product->increaseStock(
+                            $lifting_date,
+                            $request->store_id,
+                            $request->quantity[$product_id],
+                            $request->lifting_price[$product_id],
+                            "Purchase #{$lifting->lifting_no}",
+                            "Stock increased from purchase"
+                        );
                     }
-                    AccountTransactionAuto::insert($postData);
-                }
+                });
+
+                return redirect()->route('admin.lifting.index')
+                    ->withSuccessMessage('Created Successfully!');
+
+            } catch (ValidationException $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                dd($e);
+                Log::error('Lifting store failed: ' . $e->getMessage(), [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrorMessage('Something went wrong! Please try again.');
             }
-
-            $store = Store::findOrFail($request->store_id);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Purchase',
-                'action' => 'Add',
-                'description' => 'Create a new purhcase with purchase no ' . $lifting->lifting_no . ' to ' . $store->name . ' products ' . $log_data . ' on ' . $request->payment_type,
-                'user_id' => Auth::user()->id,
-            ]);
-        });
-
-        return redirect()->route('admin.lifting.index')->withSuccessMessage('Created Successfully!');
-    }
+        }
 
     public function barcodePrint(Request $request, string $id)
     {

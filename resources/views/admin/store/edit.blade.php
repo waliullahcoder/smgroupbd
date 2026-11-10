@@ -2,67 +2,117 @@
 
 @section('content')
     <div class="row g-3">
+        <input type="hidden" name="prefix" value="{{ $data->code ?? 'str' }}">
+
         <div class="col-lg-4 col-sm-6">
-            <label for="code" class="form-label"><b>Prefix <span class="text-danger">*</span></b></label>
-            <input type="text" class="form-control" id="code" name="code" required
-                value="{{ $data->code }}" placeholder="Prefix">
-        </div>
-        <div class="col-lg-4 col-sm-6">
-            <label for="name" class="form-label"><b>Store Name <span class="text-danger">*</span></b></label>
-            <input type="text" class="form-control" id="name" name="name" required
-                value="{{ $data->name }}" placeholder="Store Name">
-        </div>
-        <div class="col-lg-4 col-sm-6">
-            <label for="area_id" class="form-label"><b>Area <span class="text-danger">*</span></b></label>
-            <select name="area_id[]" id="area_id" class="select form-select" data-placeholder="Select Area" multiple
-                required>
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
                 <option value=""></option>
-                @foreach ($areas as $item)
-                    <option value="{{ $item->id }}"
-                        {{ in_array($item->id, $data->area->pluck('area_id')->toArray()) ? 'selected' : '' }}>
-                        {{ $item->name }}</option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}"
+                        {{ old('company_id', $data->company_id) == $company->id ? 'selected' : '' }}>
+                        {{ $company->name }}
+                    </option>
                 @endforeach
             </select>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <label for="address" class="form-label"><b>Address</b></label>
-            <input type="text" class="form-control" id="address" name="address"
-                value="{{ $data->address }}" placeholder="Address">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required>
+                <option value=""></option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}"
+                        {{ old('project_id', $data->branch_id) == $project->id ? 'selected' : '' }}>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
         </div>
+
         <div class="col-lg-4 col-sm-6">
-            <label for="remarks" class="form-label"><b>Remarks</b></label>
-            <input type="text" class="form-control" id="remarks" name="remarks"
-                value="{{ $data->remarks }}" placeholder="Remarks">
-        </div>
-        <div class="col-lg-4 col-sm-6">
-            <label for="type" class="form-label"><b>Store Types</b></label>
-            <div class="d-flex flex-wrap gap-2">
-                @php
-                    $types = explode(',', $data->type);
-                @endphp
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="type1" name="type[]"
-                        {{ in_array('Product Stock', $types) ? 'checked' : '' }} value="Product Stock">
-                    <label class="form-check-label" for="type1">Product Stock</label>
-                </div>
-                {{-- <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="type2" name="type[]"
-                        {{ in_array('Production Floor (Raw/Finish)', $types) ? 'checked' : '' }}
-                        value="Production Floor (Raw/Finish)">
-                    <label class="form-check-label" for="type2">Production Floor (Raw/Finish)</label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="type3" name="type[]"
-                        {{ in_array('Finish Stock', $types) ? 'checked' : '' }}
-                        value="Finish Stock">
-                    <label class="form-check-label" for="type3">Finish Stock</label>
-                </div> --}}
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="type4" name="type[]"
-                        {{ in_array('Damage Stock', $types) ? 'checked' : '' }} value="Damage Stock">
-                    <label class="form-check-label" for="type4">Damage Stock</label>
-                </div>
+                <label for="store_name" class="form-label"><b>Store Name <span class="text-danger">*</span></b></label>
+                <input type="text" class="form-control" id="store_name" name="store_name"
+                    value="{{ old('store_name', $data->store_name) }}" placeholder="Store Name">
             </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="item_name" class="form-label"><b>Item Name</b></label>
+                <input type="text" class="form-control" id="item_name" name="item_name"
+                    value="{{ old('item_name', $data->item_name) }}" placeholder="Item Name">
+            </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="assign_name" class="form-label"><b>Assign Name</b></label>
+                <input type="text" class="form-control" id="assign_name" name="assign_name"
+                    value="{{ old('assign_name', $data->assign_name) }}" placeholder="Assign Name">
+            </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="delivery_qnty" class="form-label"><b>Delivery Quantity</b></label>
+                <input type="number" step="any" min="0" class="form-control" id="delivery_qnty" name="delivery_qnty"
+                    value="{{ old('delivery_qnty', $data->delivery_qnty) }}" placeholder="Delivery Quantity">
+            </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="delivery_date" class="form-label"><b>Delivery Date</b></label>
+                <input type="date" class="form-control" id="delivery_date" name="delivery_date"
+                    value="{{ old('delivery_date', $data->delivery_date ? \Carbon\Carbon::parse($data->delivery_date)->format('Y-m-d') : '') }}">
+            </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="received_qnty" class="form-label"><b>Received Quantity</b></label>
+                <input type="number" step="any" min="0" class="form-control" id="received_qnty" name="received_qnty"
+                    value="{{ old('received_qnty', $data->received_qnty) }}" placeholder="Received Quantity">
+            </div>
+
+            <div class="col-lg-4 col-sm-6">
+                <label for="received_date" class="form-label"><b>Received Date</b></label>
+                <input type="date" class="form-control" id="received_date" name="received_date"
+                    value="{{ old('received_date', $data->received_date ? \Carbon\Carbon::parse($data->received_date)->format('Y-m-d') : '') }}">
+            </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="address" class="form-label"><b>Address <span class="text-danger">*</span></b></label>
+            <input type="text" class="form-control" id="address" name="address" required
+                value="{{ old('address', $data->address) }}" placeholder="Address">
+        </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="remarks" class="form-label"><b>Remarks <span class="text-danger">*</span></b></label>
+            <input type="text" class="form-control" id="remarks" name="remarks" required
+                value="{{ old('remarks', $data->remarks) }}" placeholder="Remarks">
         </div>
     </div>
 @endsection
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
+@endpush

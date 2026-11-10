@@ -9,19 +9,17 @@
     <div class="card-body">
         <table class="dataTable table align-middle" style="width:100%">
             <thead>
-                <tr class="text-nowrap">
-                    <th width="3"></th>
-                    <th>Type</th>
-                    <th>Purchase No</th>
-                    <th>Purchase Date</th>
-                    <th>Voucher No</th>
-                    <th>Vendor</th>
-                    <th>Store</th>
-                    <th>Purchased By</th>
-                    <th>Cost Amount</th>
-                    <th width="110" class="text-end">Actions</th>
-                </tr>
-            </thead>
+                    <tr class="text-nowrap">
+                        <th width="3"></th>
+                        <th>Payment Type</th>
+                        <th>Purchase No</th>
+                        <th>Purchase Date</th>
+                        <th>Vendor</th>
+                        <th>Purchased By</th>
+                        <th>Cost Amount</th>
+                        <th width="110" class="text-end">Actions</th>
+                    </tr>
+                </thead>
             <tbody>
             </tbody>
             @if (Auth::user()->can($delete_link))
@@ -39,7 +37,7 @@
                                 </div>
                             </div>
                         </th>
-                        <th class="text-end" colspan="9">
+                        <th class="text-end" colspan="7">
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
                                 id="bulk_delete" class="btn btn btn-xs btn-danger">Delete</button>
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
@@ -68,54 +66,49 @@
                     }
                 },
                 columns: [{
-                        data: "checkbox",
-                        name: "checkbox",
-                        orderable: false,
-                        searchable: false,
-                        width: '3'
-                    },
-                    {
-                        data: 'payment_type',
-                        name: 'payment_type'
-                    },
-                    {
-                        data: 'lifting_no',
-                        name: 'lifting_no',
-                    },
-                    {
-                        data: 'lifting_date',
-                        name: 'lifting_date',
-                        orderable: false,
-                        searchable: false,
-                    },
-                    {
-                        data: 'voucher_no',
-                        name: 'voucher_no'
-                    },
-                    {
-                        data: 'vendor.name',
-                        name: 'vendor.name'
-                    },
-                    {
-                        data: 'store.name',
-                        name: 'store.name'
-                    },
-                    {
-                        data: 'staff.name',
-                        name: 'staff.name'
-                    },
-                    {
-                        data: 'net_amount',
-                        name: 'net_amount'
-                    },
-                    {
-                        data: 'actions',
-                        name: 'actions',
-                        orderable: false,
-                        searchable: false,
-                        className: "text-end",
-                    },
-                ],
+                    data: "checkbox",
+                    name: "checkbox",
+                    orderable: false,
+                    searchable: false,
+                    width: '3'
+                },
+                {
+                    data: 'payment_type',
+                    name: 'payment_type',
+                    className: "text-capitalize"
+                },
+                {
+                    data: 'lifting_no',
+                    name: 'lifting_no',
+                },
+                {
+                    data: 'lifting_date',
+                    name: 'lifting_date',
+                    orderable: false,
+                    searchable: false,
+                },
+                {
+                    data: 'vendor.name',
+                    name: 'vendor.name',
+                    defaultContent: ''
+                },
+                {
+                    data: 'staff.name',
+                    name: 'staff.name',
+                    defaultContent: ''
+                },
+                {
+                    data: 'net_amount',
+                    name: 'net_amount'
+                },
+                {
+                    data: 'actions',
+                    name: 'actions',
+                    orderable: false,
+                    searchable: false,
+                    className: "text-end",
+                },
+            ],
                 "fnDrawCallback": function(oSettings) {
                     const tooltips = document.querySelectorAll('.tt');
                     tooltips.forEach(t => {

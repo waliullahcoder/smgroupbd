@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\CompanyScope;
+// use App\Models\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,10 +12,10 @@ class Vendor extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = ['company_id', 'coa_setup_id', 'code', 'name', 'contact_person', 'email', 'phone', 'address', 'status', 'created_by', 'updated_by', 'deleted_by'];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function company()
     {

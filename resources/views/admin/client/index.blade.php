@@ -11,8 +11,8 @@
             <thead>
                 <tr class="text-nowrap">
                     <th></th>
-                    <th>Area</th>
-                    <th>Territory</th>
+                    <!-- <th>Area</th>
+                    <th>Territory</th> -->
                     <th>Client Name</th>
                     <th>Code</th>
                     <th>Phone</th>
@@ -38,7 +38,7 @@
                                 </div>
                             </div>
                         </th>
-                        <th class="text-end" colspan="8">
+                        <th class="text-end" colspan="6">
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
                                 id="bulk_delete" class="btn btn btn-xs btn-danger">Delete</button>
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
@@ -73,7 +73,7 @@
                         searchable: false,
                         width: '30'
                     },
-                    {
+                    /*{
                         data: 'area.name',
                         name: 'area.name',
                         defaultContent: ''
@@ -82,7 +82,7 @@
                         data: 'territory.name',
                         name: 'territory.name',
                         defaultContent: ''
-                    },
+                    },*/
                     {
                         data: 'name',
                         name: 'name'

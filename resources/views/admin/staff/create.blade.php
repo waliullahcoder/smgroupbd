@@ -2,29 +2,22 @@
 
 @section('content')
     <div class="row g-3">
-        @if (Auth::user()->hasRole('Software Admin'))
-            <div class="col-lg-4 col-sm-6">
-                <label for="company_id" class="form-label"><b>Company Name <span class="text-danger">*</span></b></label>
-                <select name="company_id" id="company_id" class="select form-select" data-placeholder="Select Company" required>
-                    <option value=""></option>
-                    @foreach ($companies as $company)
-                        <option value="{{ $company->id }}"
-                            {{ old('company_id') && old('company_id') == $company->id ? 'selected' : '' }}>
-                            {{ $company->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        @endif
-        <div class="col-lg-4 col-sm-6">
-            <label for="branch_id" class="form-label"><b>Branch Name <span class="text-danger">*</span></b></label>
-            <select name="branch_id" id="branch_id" class="select form-select" data-placeholder="Select Branch" required>
+       <div class="col-lg-4 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
                 <option value=""></option>
-                @foreach ($branches as $branch)
-                    <option value="{{ $branch->id }}"
-                        {{ old('branch_id') && old('branch_id') == $branch->id ? 'selected' : '' }}>
-                        {{ $branch->name }}</option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}">{{ $company->name }}</option>
                 @endforeach
+            </select>
+        </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="branch_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required disabled>
+                <option value=""></option>
             </select>
         </div>
         <div class="col-lg-4 col-sm-6">
@@ -246,4 +239,33 @@
 
 
     </script>
+@endpush
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

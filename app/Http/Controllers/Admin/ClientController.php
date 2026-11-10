@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\ChainClient;
+use App\Models\Branch;
 use App\Models\Client;
 use App\Models\ClientCategory;
 use App\Models\CoaSetup;
@@ -105,11 +106,6 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'reference_by' => 'required',
-            'area_id' => 'required',
-            'territory_id' => 'required',
-            'code' => 'required',
-            'phone' => 'required|unique:users,phone|unique:users,user_name',
             'name' => 'required',
         ]);
 
@@ -121,7 +117,7 @@ class ClientController extends Controller
 
         DB::transaction(function () use ($request) {
             $user = User::create([
-                'company_id' => $request->company_id ?? Auth::user()->company_id,
+                'company_id' => $request->company_id,
                 'role' => 2,
                 'name' => $request->name,
                 'user_name' => $request->phone,
@@ -133,7 +129,8 @@ class ClientController extends Controller
             ]);
 
             Client::create([
-                'company_id' => $request->company_id ?? Auth::user()->company_id,
+                'company_id' => $request->company_id,
+                'branch_id' => $request->project_id,
                 'user_id' => $user->id,
                 'coa_setup_id' => $request->coa_setup_id,
                 'reference_by' => $request->reference_by,
@@ -173,9 +170,11 @@ class ClientController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)
-    {
+    { 
+        
+        $data = Client::findOrFail($id);
         if (request()->ajax() && request('status')) {
-            $data = Client::findOrFail($id);
+           
             $data->update(['status' => !$data->status]);
             return response()->json(['status' => 'success']);
         }
@@ -187,6 +186,10 @@ class ClientController extends Controller
 
         $title = 'Update Client';
         $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $data->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
         $staffs = Staff::where('status', 1)->orderBy('name', 'asc')->get();
         $categories = ClientCategory::where('status', 1)->orderBy('name', 'asc')->get();
         $areas = Area::where('status', 1)->orderBy('name', 'asc')->get();
@@ -196,7 +199,7 @@ class ClientController extends Controller
         $link = Route('admin.client.update', $id);
         $client_coa_id = Client::whereNotIn('id', [$id])->whereNotNull('coa_setup_id')->get('coa_setup_id')->pluck('coa_setup_id')->toArray();
         $coas = CoaSetup::whereNotIn('id', $client_coa_id)->where('head_code', 'like', '10101%')->where('transaction', 1)->get();
-        return view('admin.client.edit', compact('title', 'companies', 'staffs', 'categories', 'areas', 'chain_clients', 'data', 'territories', 'link', 'coas'));
+        return view('admin.client.edit', compact('title', 'companies', 'staffs', 'categories', 'areas', 'chain_clients', 'data', 'territories', 'link', 'coas','projects'));
     }
 
     /**
@@ -205,10 +208,6 @@ class ClientController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'reference_by' => 'required',
-            'area_id' => 'required',
-            'territory_id' => 'required',
-            'code' => 'required',
             'name' => 'required',
         ]);
 
@@ -220,7 +219,8 @@ class ClientController extends Controller
             }
         }
         $data->update([
-            'company_id' => $request->company_id ?? Auth::user()->company_id,
+           'company_id' => $request->company_id,
+            'branch_id' => $request->project_id,
             'coa_setup_id' => $request->coa_setup_id,
             'reference_by' => $request->reference_by,
             'client_category_id' => $request->client_category_id,

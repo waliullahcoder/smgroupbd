@@ -2,31 +2,30 @@
 
 @section('content')
     <div class="row g-3">
-        <div class="col-md-4 col-sm-6">
-            <label for="lifting_type" class="form-label"><b>Lifting Type <span class="text-danger">*</span></b></label>
-            <select name="lifting_type" id="lifting_type" class="select form-select" required>
-                <option value="manual">By Manual</option>
-                <option value="barcode">By Barcode</option>
-            </select>
-        </div>
-        <div class="col-md-4 col-sm-6" id="payment_type_area">
-            <label for="payment_type" class="form-label"><b>Payment Type <span class="text-danger">*</span></b></label>
-            <select name="payment_type" id="payment_type" class="select form-select" data-placeholder="Payment Type"
-                required>
-                <option value="credit">Credit</option>
-                <option value="cash">Cash</option>
-            </select>
-        </div>
-        <div class="col-md-3 col-sm-6" id="accounts_area" style="display: none;">
-            <label for="coa_setup_id" class="form-label"><b>Cash Account <span class="text-danger">*</span></b></label>
-            <select name="coa_setup_id" id="coa_setup_id" class="select form-select" data-placeholder="Select Cash Account">
-                <option value="">Select Cash Account</option>
-                @foreach ($cash_heads as $cash_head)
-                    <option value="{{ $cash_head->id }}">{{ $cash_head->head_name . ' - ' . $cash_head->head_code }}
-                    </option>
+       
+        <input type="hidden" name="lifting_type" value="manual">
+        <input type="hidden" name="payment_type" value="credit">
+        <input type="hidden" name="store_id" value="1">
+        <div class="col-lg-4 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
+                <option value=""></option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}">{{ $company->name }}</option>
                 @endforeach
             </select>
         </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required disabled>
+                <option value=""></option>
+            </select>
+        </div>
+        
+        
         <div class="col-md-4 col-sm-6" id="lifting_no_area">
             <label for="lifting_no" class="form-label"><b>Purchase No. <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="lifting_no" name="lifting_no" value="{{ $lifting_no }}"
@@ -49,29 +48,23 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4 col-sm-6">
+        
+        <div class="col-md-4 col-sm-6" id="lifting_no_area">
             <label for="voucher_no" class="form-label"><b>Voucher No.</b></label>
-            <input type="text" class="form-control" id="voucher_no" name="voucher_no" value="{{ old('voucher_no') }}"
-                placeholder="Voucher No.">
+            <input type="text" class="form-control" id="voucher_no" name="voucher_no" placeholder="Voucher No.">
         </div>
         <div class="col-md-4 col-sm-6">
-            <label for="store_id" class="form-label"><b>Receive Store <span class="text-danger">*</span></b></label>
-            <select name="store_id" id="store_id" class="select form-select" data-placeholder="Select Store" required>
-                @foreach ($stores as $store)
-                    <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }}>
-                        {{ $store->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-4 col-sm-6">
-            <label for="product_id" class="form-label"><b>Products</b></label>
+            <label for="product_id" class="form-label"><b>Products <a href="{{url('/admin/product/create')}}">Add new</a></b></label>
             <select id="product_id" class="select form-select" data-placeholder="Select Product">
                 <option value=""></option>
                 @foreach ($products as $item)
                     <option value="{{ $item->id }}">{{ $item->name }} - {{ $item->code }}</option>
                 @endforeach
             </select>
+        </div>
+        <div class="col-md-4 col-sm-6" id="lifting_no_area">
+            <label for="lifting_no" class="form-label"><b>Remarks </b></label>
+            <input type="text" class="form-control" id="remarks" name="remarks" placeholder="Remarks Note" required>
         </div>
         <div class="col-md-2 col-sm-6" id="lifting_type_trigger">
             <div id="barcode_qty" style="display: none;">
@@ -140,6 +133,12 @@
                                     <b class="text-end me-2" style="width: 80px;">Discount</b>
                                     <input type="number" id="discount" name="discount" class="form-control"
                                         placeholder="Discount" style="min-width: 100px;" value="0">
+                                    <span class="text-end" style="width: 25px;">TK.</span>
+                                </div>
+                                 <div class="input-group flex-nowrap align-items-center">
+                                    <b class="text-end me-2" style="width: 80px;">Tax</b>
+                                    <input type="number" id="tax" name="tax" class="form-control"
+                                        placeholder="Tax" style="min-width: 100px;" value="0">
                                     <span class="text-end" style="width: 25px;">TK.</span>
                                 </div>
                                 <div class="input-group flex-nowrap align-items-center">
@@ -416,4 +415,34 @@
             }
         });
     </script>
+@endpush
+
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

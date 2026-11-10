@@ -2,11 +2,8 @@
 
 @section('content')
     <div class="row g-3">
-        <div class="col-lg-4 col-sm-6">
-            <label for="prefix" class="form-label"><b>Prefix</b></label>
-            <input type="text" class="form-control" id="prefix" name="prefix" value="{{ $data->prefix }}"
-                placeholder="Prefix">
-        </div>
+       
+        <input type="hidden" name="prefix" value="CMP">
         <div class="col-lg-4 col-sm-6">
             <label for="name" class="form-label"><b>Company Name <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="name" name="name" required
@@ -15,7 +12,7 @@
         <div class="col-lg-4 col-sm-6">
             <label for="username" class="form-label"><b>Username <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="username" name="username" required
-                value="{{ $data->username }}" placeholder="Username" readonly>
+                value="{{ $data->username }}" placeholder="Username">
         </div>
         <div class="col-lg-4 col-sm-6">
             <label for="email" class="form-label"><b>Email <span class="text-danger">*</span></b></label>
@@ -55,6 +52,7 @@
         <div class="col-lg-4 col-sm-6">
             <label for="logo" class="form-label"><b>Logo</b></label>
             <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+             <img src="{{ asset($data->logo) }}" name="Company Logo" width="100">
         </div>
         <div class="col-lg-4 col-sm-6">
             <label for="address" class="form-label"><b>Address</b></label>

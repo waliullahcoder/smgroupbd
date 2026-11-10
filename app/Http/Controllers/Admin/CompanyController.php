@@ -21,36 +21,48 @@ class CompanyController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+   public function index()
     {
         if (request()->ajax()) {
-            $model = Company::query();
+            // Sob entry: soft-deleted + global scope ignore
+            $model = Company::withoutGlobalScopes()->withTrashed();
+
             $type = request('type');
             if (!empty($type) && $type == 'trash') {
-                $model->onlyTrashed();
+                $model = Company::withoutGlobalScopes()->onlyTrashed();
             }
+
             return DataTables::eloquent($model)
                 ->addColumn('checkbox', function ($row) {
-                    $checkbox = '<div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input ' . (!empty(request('type')) && request('type') == "trash" ? 'trash_multi_checkbox' : 'multi_checkbox') . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                    return $checkbox;
+                    $class = $row->trashed() || request('type') == 'trash'
+                        ? 'trash_multi_checkbox'
+                        : 'multi_checkbox';
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input ' . $class . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '">
+                        <label for="' . $row->id . '" class="custom-control-label"></label>
+                    </div>';
+                })
+                ->editColumn('name', function ($row) {
+                    $badge = $row->trashed()
+                        ? ' <span class="badge bg-danger">Deleted</span>'
+                        : '';
+                    return e($row->name) . $badge;
                 })
                 ->addColumn('actions', function ($row) {
-                    $type = request('type');
                     $data = [
-                        'id' => $row->id,
-                        'edit' => !empty($type) && $type == 'trash' ? false : true,
+                        'id'   => $row->id,
+                        'edit' => !$row->trashed(),
                     ];
                     return ActionButtons::actions($data);
                 })
-                ->rawColumns(['checkbox', 'actions'])
+                ->rawColumns(['checkbox', 'name', 'actions'])
                 ->make(true);
         }
 
-        $title = "Company Setup";
+        $title = "Company Management";
         return view('admin.company.index', compact('title'));
     }
-
     /**
      * Show the form for creating a new resource.
      */
@@ -67,9 +79,9 @@ class CompanyController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'username' => 'required|unique:users,user_name',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'required|unique:users,phone',
+            'username' => 'required',
+            'email' => 'required|email',
+            'phone' => 'required',
             'logo' => 'image|required',
         ]);
 
@@ -141,6 +153,7 @@ class CompanyController extends Controller
             DB::commit();
             return redirect()->route('admin.company.index')->withSuccessMessage('Created Successfully!');
         } catch (Exception $e) {
+            dd($e);
             DB::rollBack();
             return redirect()->back()->withErrors('Something Went Wrong!!!');
         }
@@ -172,14 +185,12 @@ class CompanyController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'username' => 'required|unique:companies,username,' . $id,
-            'email' => 'required|email|unique:companies,email,' . $id,
-            'phone' => 'required|unique:companies,phone,' . $id,
+            'username' => 'required',
             'email' => 'required|email',
             'phone' => 'required',
             'logo' => 'image',
         ]);
-
+ 
         $company = Company::findOrFail($id);
         $logo = $request->file('logo');
         if (isset($logo)) {

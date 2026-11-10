@@ -223,6 +223,8 @@ Route::group(['as' => 'admin.', 'prefix' => 'admin', 'middleware' => ['admin_per
 
     // Store Setup
     Route::resource('/store', StoreController::class);
+    Route::get('/store-projects/{company}', [StoreController::class, 'getProjectsByCompany'])
+    ->name('store.projects');
 
     // Staff Setup
     Route::resource('/staff', StaffController::class);

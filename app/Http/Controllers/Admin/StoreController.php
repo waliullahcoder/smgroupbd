@@ -22,46 +22,52 @@ class StoreController extends Controller
     public function index()
     {
         if (request()->ajax()) {
-            $model = Store::with(['company', 'branch', 'area', 'area.area']);
-            if (Auth::user()->store_id) {
-                $model->where('id', Auth::user()->store_id);
-            }
+            // Sob store: global scope ignore + soft-deleted shoho
+            $model = Store::withoutGlobalScopes()
+                ->withTrashed()
+                ->with(['company', 'branch']);
+
             $type = request('type');
             if (!empty($type) && $type == 'trash') {
-                $model->onlyTrashed();
+                $model = Store::withoutGlobalScopes()
+                    ->onlyTrashed()
+                    ->with(['company', 'branch']);
             }
+
             return DataTables::eloquent($model)
                 ->addColumn('checkbox', function ($row) {
-                    $checkbox = '<div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input ' . (!empty(request('type')) && request('type') == "trash" ? 'trash_multi_checkbox' : 'multi_checkbox') . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                    return $checkbox;
+                    $class = ($row->trashed() || request('type') == 'trash')
+                        ? 'trash_multi_checkbox'
+                        : 'multi_checkbox';
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input ' . $class . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '">
+                        <label for="' . $row->id . '" class="custom-control-label"></label>
+                    </div>';
                 })
-                ->addColumn('area_names', function ($row) {
-                    $string = str_replace(',', ' || ', json_encode($row->area->pluck('area.name')->toArray()));
-                    $string = str_replace('"', '', $string);
-                    $string = str_replace('[', '', $string);
-                    $string = str_replace(']', '', $string);
-                    return $string;
+                ->editColumn('name', function ($row) {
+                    $badge = $row->trashed()
+                        ? ' <span class="badge bg-danger">Deleted</span>'
+                        : '';
+                    return e($row->name) . $badge;
                 })
                 ->addColumn('status', function ($row) {
-                    $status = '<div class="form-check form-switch">
-                    <input class="form-check-input change-status c-pointer" data-url="' . Route('admin.store.edit', $row->id) . '" type="checkbox" name="status" ' . ($row->status == 1 ? 'checked' : '') . '>
+                    return '<div class="form-check form-switch">
+                        <input class="form-check-input change-status c-pointer" data-url="' . Route('admin.store.edit', $row->id) . '" type="checkbox" name="status" ' . ($row->status == 1 ? 'checked' : '') . '>
                     </div>';
-                    return $status;
                 })
                 ->addColumn('actions', function ($row) {
-                    $type = request('type');
                     $data = [
-                        'id' => $row->id,
-                        'edit' => !empty($type) && $type == 'trash' ? false : true,
+                        'id'   => $row->id,
+                        'edit' => !$row->trashed(),
                     ];
                     return ActionButtons::actions($data);
                 })
-                ->rawColumns(['checkbox', 'status', 'actions'])
+                ->rawColumns(['checkbox', 'name', 'status', 'actions'])
                 ->make(true);
         }
 
-        $title = "Store Setup";
+        $title = "Store Management";
         return view('admin.store.index', compact('title'));
     }
 
@@ -72,9 +78,16 @@ class StoreController extends Controller
     {
         $title = 'Add New Store';
         $companies = Company::orderBy('name', 'asc')->get();
-        $usedArea = StoreArea::pluck('area_id')->toArray();
-        $areas = Area::whereNotIn('id', $usedArea)->where('status', 1)->orderBy('name', 'asc')->get();
-        return view('admin.store.create', compact('title', 'companies', 'areas'));
+        return view('admin.store.create', compact('title', 'companies'));
+    }
+
+    public function getProjectsByCompany($companyId)
+    {
+        $projects = Branch::where('company_id', $companyId)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return response()->json($projects);
     }
 
     /**
@@ -83,31 +96,27 @@ class StoreController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'code' => 'required',
-            'name' => 'required',
+            'store_name' => 'required',
         ]);
 
         DB::transaction(function () use ($request) {
-            $types = implode(',', $request->type);
-            $branch = Branch::where('company_id', Auth::user()->company_id ?? 1)->first();
-
             $data = Store::create([
-                'company_id' => Auth::user()->company_id ?? 1,
-                'branch_id' => $branch->id,
-                'code' => $request->code,
-                'type' => $types,
-                'name' => $request->name,
-                'address' => $request->address,
-                'remarks' => $request->remarks,
-                'created_by' => Auth::user()->id,
+                'company_id'    => $request->company_id,
+                'branch_id'     => $request->project_id,
+                'name'          => $request->name,
+                'address'       => $request->address,
+                'remarks'       => $request->remarks,
+                'store_name'    => $request->store_name,
+                'item_name'     => $request->item_name,
+                'assign_name'   => $request->assign_name,
+                'delivery_qnty' => $request->delivery_qnty,
+                'delivery_date' => $request->delivery_date,
+                'received_qnty' => $request->received_qnty,
+                'received_date' => $request->received_date,
+                'created_by'    => Auth::user()->id,
             ]);
 
-            foreach ($request->area_id as $area_id) {
-                StoreArea::create([
-                    'store_id' => $data->id,
-                    'area_id' => $area_id,
-                ]);
-            }
+          
         });
 
         return redirect()->route('admin.store.index')->withSuccessMessage('Created Successfully!');
@@ -135,9 +144,13 @@ class StoreController extends Controller
         $title = 'Update Store';
         $data = Store::findOrFail($id);
         $link = Route('admin.store.update', $id);
-        $usedArea = StoreArea::whereNotIn('store_id', [$id])->pluck('area_id')->toArray();
-        $areas = Area::whereNotIn('id', $usedArea)->orderBy('name', 'asc')->get();
-        return view('admin.store.edit', compact('title', 'data', 'link', 'areas'));
+
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $data->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('admin.store.edit', compact('title', 'data', 'link', 'companies', 'projects'));
     }
 
     /**
@@ -146,30 +159,28 @@ class StoreController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'code' => 'required',
-            'name' => 'required',
+            'store_name' => 'required',
         ]);
 
         DB::transaction(function () use ($request, $id) {
-            $types = implode(',', $request->type);
-
             $data = Store::findOrFail($id);
-            $data->update([
-                'code' => $request->code,
-                'type' => $types,
-                'name' => $request->name,
-                'address' => $request->address,
-                'remarks' => $request->remarks,
-                'updated_by' => Auth::user()->id,
+          $data->update([
+                'company_id'    => $request->company_id,
+                'branch_id'     => $request->project_id,
+                'name'          => $request->name,
+                'address'       => $request->address,
+                'remarks'       => $request->remarks,
+                'store_name'    => $request->store_name,
+                'item_name'     => $request->item_name,
+                'assign_name'   => $request->assign_name,
+                'delivery_qnty' => $request->delivery_qnty,
+                'delivery_date' => $request->delivery_date,
+                'received_qnty' => $request->received_qnty,
+                'received_date' => $request->received_date,
+                'updated_by'    => Auth::user()->id, // column thakle
             ]);
 
-            StoreArea::where('store_id', $id)->delete();
-            foreach ($request->area_id as $area_id) {
-                StoreArea::create([
-                    'store_id' => $data->id,
-                    'area_id' => $area_id,
-                ]);
-            }
+           
         });
 
         return redirect()->route('admin.store.index')->withSuccessMessage('Updated Successfully!');

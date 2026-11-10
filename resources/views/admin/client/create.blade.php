@@ -2,61 +2,29 @@
 
 @section('content')
     <div class="row g-3">
-        @if (Auth::user()->hasRole('Software Admin'))
-            <div class="col-sm-6">
-                <label for="company_id" class="form-label"><b>Company Name <span class="text-danger">*</span></b></label>
-                <select name="company_id" id="company_id" class="select form-select" data-placeholder="Select Company" required>
-                    <option value=""></option>
-                    @foreach ($companies as $company)
-                        <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>
-                            {{ $company->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        @endif
-        <div class="col-sm-6">
-            <label for="reference_by" class="form-label"><b>Reference By <span class="text-danger">*</span></b></label>
-            <select name="reference_by" id="reference_by" class="select form-select" data-placeholder="Select Reference"
-                required>
+        <div class="col-lg-6 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
                 <option value=""></option>
-                @foreach ($staffs as $staff)
-                    <option value="{{ $staff->id }}" {{ old('reference_by') == $staff->id ? 'selected' : '' }}>
-                        {{ $staff->name }}
-                    </option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}">{{ $company->name }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="col-sm-6">
-            <label for="area_id" class="form-label"><b>Area <span class="text-danger">*</span></b></label>
-            <select name="area_id" id="area_id" class="select form-select" data-placeholder="Select Area" required>
-                <option value=""></option>
-                @foreach ($areas as $area)
-                    <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>
-                        {{ $area->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-sm-6">
-            <label for="territory_id" class="form-label"><b>Territory <span class="text-danger">*</span></b></label>
-            <select name="territory_id" id="territory_id" class="select form-select" data-placeholder="Select Territory"
-                required>
+
+        <div class="col-lg-6 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required disabled>
                 <option value=""></option>
             </select>
         </div>
-        <div class="col-sm-6">
-            <label for="client_category_id" class="form-label"><b>Client Type</b></label>
-            <select name="client_category_id" id="client_category_id" class="select form-select"
-                data-placeholder="Select Client Type">
-                <option value=""></option>
-                @foreach ($categories as $category)
-                    <option value="{{ $category->id }}" {{ old('client_category_id') == $category->id ? 'selected' : '' }}>
-                        {{ $category->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        <input type="hidden" name="reference_by" value="1">
+        <input type="hidden" name="area_id" value="1">
+        <input type="hidden" name="territory_id" value="1">
+        <input type="hidden" name="client_category_id" value="1">
+        
         <div class="col-sm-6">
             <label for="code" class="form-label"><b>Client Code <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" id="code" name="code" value="{{ $code }}"
@@ -147,4 +115,34 @@
             });
         })
     </script>
+@endpush
+
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

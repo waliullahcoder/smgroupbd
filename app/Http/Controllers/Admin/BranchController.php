@@ -53,7 +53,7 @@ class BranchController extends Controller
                 ->make(true);
         }
 
-        $title = "Branch Setup";
+        $title = "Project Management";
         return view('admin.branch.index', compact('title'));
     }
 
@@ -62,7 +62,7 @@ class BranchController extends Controller
      */
     public function create()
     {
-        $title = 'Add New Branch';
+        $title = 'Add New Project';
         $companies = Company::orderBy('name')->get();
         return view('admin.branch.create', compact('title', 'companies'));
     }
@@ -131,7 +131,7 @@ class BranchController extends Controller
             return response()->json(['status' => 'success']);
         }
 
-        $title = 'Update Branch';
+        $title = 'Update Project';
         $data = Branch::findOrFail($id);
         $link = Route('admin.branch.update', $id);
         $companies = Company::orderBy('name')->get();
