@@ -6,6 +6,7 @@ use App\HelperClass;
 use Throwable;
 use Exception;
 use Carbon\Carbon;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Staff;
 use App\Models\Store;
@@ -171,17 +172,17 @@ class SalesController extends Controller
 
             if (is_array($request->product_id) && in_array($product_id, $request->product_id)) {
                 $total_qty = $request->qty[$product_id] + 1;
-                if ($stock < $total_qty) {
-                    return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
-                }
+                // if ($stock < $total_qty) {
+                //     return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
+                // }
                 $price = $request->rate[$product_id];
                 $amount = $total_qty * $price;
                 return response()->json(['status' => 'increment', 'product_id' => $product_id, 'total_qty' => $total_qty, 'amount' => $amount]);
             }
 
-            if ($stock < 1) {
-                return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
-            }
+            // if ($stock < 1) {
+            //     return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
+            // }
 
             return response()->json(['status' => 'success', 'product' => $product, 'price' => $price]);
         }
@@ -190,19 +191,20 @@ class SalesController extends Controller
             $store_id = $request->store_id;
             $product_id = $request->product_id;
 
-            $stock = HelperClass::stock($product_id, $store_id);
-            if ($request->quantity > $stock) {
-                return response()->json(['status' => 'error', 'data' => 'stock not available!']);
-            } else {
+            // $stock = HelperClass::stock($product_id, $store_id);
+            // if ($request->quantity > $stock) {
+            //     return response()->json(['status' => 'error', 'data' => 'stock not available!']);
+            // } else {
                 $product = Product::findOrFail($request->product_id);
                 $price = $product->price->sale_price;
                 $amount = $request->quantity * $price;
-                return response()->json(['status' => 'success', 'product' => $product, 'stock' => $stock, 'price' => $price, 'amount' => $amount]);
-            }
+                return response()->json(['status' => 'success', 'product' => $product, 'price' => $price, 'amount' => $amount]);
+            // }
         }
 
         $title = 'Add New Sales';
         $invoice = $this->getOrderNo();
+        $companies = Company::orderBy('name', 'asc')->get();
         $stores = Store::where('status', 1)->get();
         $staffs = Staff::where('status', 1)->where('type', 'sales')->orderBy('name', 'asc')->get();
         $clients = Client::where('status', 1)->orderBy('name', 'asc')->get();
@@ -210,7 +212,7 @@ class SalesController extends Controller
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand')->orWhere('head_name', 'Cash In Bank');
         })->get();
-        return view('admin.sales.create', compact('title', 'clients', 'invoice', 'stores', 'staffs', 'products', 'cash_heads'));
+        return view('admin.sales.create', compact('title', 'clients', 'invoice', 'stores', 'staffs', 'products', 'cash_heads','companies'));
     }
 
     /**
@@ -224,7 +226,6 @@ class SalesController extends Controller
             'invoice' => 'required',
             'date' => 'required',
             'client_id' => 'required',
-            'store_id' => 'required',
             'product_id' => 'required',
             'qty' => 'required',
         ]);
@@ -238,7 +239,8 @@ class SalesController extends Controller
         try {
             DB::transaction(function () use ($request, $admin_setting) {
                 $sales = Sales::create([
-                    'company_id' => Auth::user()->company_id ?? 1,
+                    'company_id' => $request->company_id,
+                    'branch_id' => $request->project_id,
                     'store_id' => $request->store_id,
                     'client_id' => $request->client_id,
                     'coa_setup_id' => $request->coa_setup_id,
@@ -254,10 +256,10 @@ class SalesController extends Controller
 
                 foreach ($request->product_id as $product_id) {
                     $stock = HelperClass::stock($product_id, $request->store_id);
-                    if ($request->qty[$product_id] > $stock) {
-                        $product = Product::find($product_id);
-                        throw new Exception('stock not available please decrease quantity for ' . $product->name);
-                    } else {
+                    // if ($request->qty[$product_id] > $stock) {
+                    //     $product = Product::find($product_id);
+                    //     throw new Exception('stock not available please decrease quantity for ' . $product->name);
+                    // } else {
                         $discount = ($request->discount / $request->total_amount) * $request->amount[$product_id];
                         SalesList::create([
                             'company_id' => Auth::user()->company_id ?? 1,
@@ -271,7 +273,7 @@ class SalesController extends Controller
                             'discount' => $discount,
                             'collection' => $request->sales_type == 'cash' ? ($request->amount[$product_id] - $discount) : 0.00,
                         ]);
-                    }
+                    //}
                 }
 
                 $client = Client::find($request->client_id);
@@ -314,65 +316,7 @@ class SalesController extends Controller
                     AccountTransactionAuto::insert($postData);
                 }
 
-                if ($request->sales_type == 'cash') {
-                    $first = date('Y-m-01');
-                    $last = new Carbon('last day of this month');
-                    $pay_data = Collection::withoutGlobalScope(CompanyScope::class)->withTrashed()->select(['payment_no'])->whereDate('created_at', '>=', $first)->whereDate('created_at', '<=', $last)->orderBy('id', 'desc')->first();
-                    if ($pay_data) {
-                        $trim = str_replace("STC", '', $pay_data->payment_no);
-                        $dataPrefix = (int)$trim + 1;
-                        $payment_no = "STC" . $dataPrefix;
-                    } else {
-                        $payment_no = "STC" . date('y') . date('m') . '000001';
-                    }
-
-                    $collection = Collection::create([
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'client_id' => $request->client_id,
-                        'payment_no' => $payment_no,
-                        'amount' => $request->net_amount,
-                        'payment_date' => date('Y-m-d', strtotime($request->date)),
-                        'collection_type' => 'collection',
-                        'payment_type' => $request->sales_type,
-                        'remarks' => 'Paid on Sale',
-                        'sales_id' => $sales->id,
-                        'created_by' => Auth::user()->id,
-                    ]);
-
-                    CollectionData::create([
-                        'collection_id' => $collection->id,
-                        'sales_id' => $sales->id,
-                        'amount' => $request->net_amount,
-                    ]);
-
-                    if (@$admin_setting->accounting == 1 && $client->coa) {
-                        $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                        $headCode = collect([
-                            '0' => $cash_head->head_code,
-                            '1' => $client->coa->head_code
-                        ]);
-
-                        $postData = [];
-                        for ($i = 0; $i < $countHead; $i++) {
-                            $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                            $postData[] = [
-                                'company_id' => Auth::user()->company_id ?? 1,
-                                'voucher_no' => $payment_no,
-                                'voucher_type' => "Collection",
-                                'voucher_date' => date('Y-m-d', strtotime($request->date)),
-                                'coa_setup_id' => $coa->id,
-                                'coa_head_code' => $headCode[$i],
-                                'narration' => 'Collection Against PAYMENT NO - ' . $payment_no,
-                                'debit_amount' => $debit_amount[$i],
-                                'credit_amount' => $credit_amount[$i],
-                                'created_by' => Auth::user()->id,
-                                'created_at' => Carbon::now(),
-                                'updated_at' => Carbon::now()
-                            ];
-                        }
-                        AccountTransactionAuto::insert($postData);
-                    }
-                }
+               
 
                 $store = Store::find($request->store_id);
                 $products_info = '';
@@ -380,13 +324,7 @@ class SalesController extends Controller
                     $product = Product::find($product_id);
                     $products_info .= ' ' . $product->name . ' Quanity : ' . $request->qty[$product_id] . ' ' . $product->attribute->name;
                 }
-                AccessLog::create([
-                    'date_time' => Carbon::now(),
-                    'page' => 'Sales',
-                    'action' => 'Add',
-                    'description' => 'Create a new sales with invoice no ' . $sales->invoice . ' to client ' . $client->name . ' from store ' . $store->name . ' sales amount is ' . $sales->total_amount . ' sales discount ' . $sales->discount . ' products ' . $products_info . ' on ' . ($request->sales_type == 'cash' ? 'cash sale' : 'credit sale'),
-                    'user_id' => Auth::user()->id,
-                ]);
+              
             });
         } catch (Throwable $caught) {
             if ($caught) {
@@ -551,9 +489,9 @@ class SalesController extends Controller
                 return response()->json(['status' => 'increment', 'product_id' => $product_id, 'total_qty' => $total_qty, 'amount' => $amount]);
             }
 
-            if ($stock < 1) {
-                return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
-            }
+            // if ($stock < 1) {
+            //     return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
+            // }
 
             return response()->json(['status' => 'success', 'product' => $product, 'price' => $price]);
         }
@@ -564,14 +502,14 @@ class SalesController extends Controller
 
             $sales = SalesList::where('sales_id', $id)->where('store_id', $store_id)->where('product_id', $product_id)->first();
             $stock = HelperClass::stock($product_id, $store_id) + @$sales->qty;
-            if ($request->quantity > $stock) {
-                return response()->json(['status' => 'error', 'data' => 'stock not available!']);
-            } else {
+            // if ($request->quantity > $stock) {
+            //     return response()->json(['status' => 'error', 'data' => 'stock not available!']);
+            // } else {
                 $product = Product::findOrFail($request->product_id);
                 $price = $product->price->sale_price;
                 $amount = $request->quantity * $price;
-                return response()->json(['status' => 'success', 'product' => $product, 'stock' => $stock, 'price' => $price, 'amount' => $amount]);
-            }
+                return response()->json(['status' => 'success', 'product' => $product, 'price' => $price, 'amount' => $amount]);
+            // }
         }
 
         $title = 'Update Sales';
@@ -591,7 +529,11 @@ class SalesController extends Controller
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand')->orWhere('head_name', 'Cash In Bank');
         })->get();
-        return view('admin.sales.edit', compact('title', 'clients', 'stores', 'staffs', 'data', 'link', 'balance', 'products', 'cash_heads'));
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $data->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+        return view('admin.sales.edit', compact('title', 'clients', 'stores', 'staffs', 'data', 'link', 'balance', 'products', 'cash_heads','companies','projects'));
     }
 
     public function searchEdit(Request $request)
@@ -654,6 +596,8 @@ class SalesController extends Controller
                 SalesList::where('sales_id', $id)->delete();
 
                 $sales->update([
+                    'company_id' => $request->company_id,
+                    'branch_id' => $request->project_id,
                     'store_id' => $request->store_id,
                     'client_id' => $request->client_id,
                     'coa_setup_id' => $request->coa_setup_id,

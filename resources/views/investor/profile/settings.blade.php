@@ -103,7 +103,7 @@
                                                             Name</b></label>
                                                     <div class="col-lg-10 col-sm-8">
                                                         <input type="text" name="branch" id="branch"
-                                                            class="form-control" placeholder="Branch Name"
+                                                            class="form-control" placeholder="Project Name"
                                                             value="{{ $data->branch }}">
                                                     </div>
                                                 </div>

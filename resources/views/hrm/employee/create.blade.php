@@ -17,7 +17,7 @@
             </div>
         @endif
         <div class="col-lg-4 col-sm-6">
-            <label for="branch_id" class="form-label"><b>Branch Name <span class="text-danger">*</span></b></label>
+            <label for="branch_id" class="form-label"><b>Project Name <span class="text-danger">*</span></b></label>
             <select name="branch_id" id="branch_id" class="select form-select" data-placeholder="Select Branch" required>
                 <option value=""></option>
                 @foreach ($branches as $branch)

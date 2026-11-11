@@ -14,7 +14,7 @@
                     @if (Auth::user()->hasRole('Software Admin'))
                         <th>Company</th>
                     @endif
-                    <th>Branch Name</th>
+                    <th>Project Name</th>
                     <th>Contact Person</th>
                     <th>Email</th>
                     <th>Phone</th>

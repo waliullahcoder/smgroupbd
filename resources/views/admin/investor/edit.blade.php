@@ -58,8 +58,8 @@
                 value="{{ $data->bank }}">
         </div>
         <div class="col-lg-4 col-sm-6">
-            <label for="branch" class="form-label"><b>Branch Name</b></label>
-            <input type="text" name="branch" id="branch" class="form-control" placeholder="Branch Name"
+            <label for="branch" class="form-label"><b>Project Name</b></label>
+            <input type="text" name="branch" id="branch" class="form-control" placeholder="Project Name"
                 value="{{ $data->branch }}">
         </div>
         <div class="col-lg-4 col-sm-6">
