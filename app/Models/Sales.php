@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Sales extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['company_id', 'branch_id', 'product_type', 'store_id', 'staff_id', 'client_id', 'coa_setup_id', 'invoice', 'date', 'sales_type', 'total_amount', 'discount', 'total_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['company_id', 'branch_id','tax', 'tax_amount', 'product_type', 'store_id', 'staff_id', 'client_id', 'coa_setup_id', 'invoice', 'date', 'sales_type', 'total_amount', 'discount', 'total_paid', 'status', 'created_by', 'updated_by', 'deleted_by'];
 
     // protected static function booted()
     // {

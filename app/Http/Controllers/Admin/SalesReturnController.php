@@ -170,72 +170,10 @@ class SalesReturnController extends Controller
                     $sales_list->update(['returned_qty' => $total_return_qty, 'returned_amount' => $total_return_amount]);
                 }
                 // Increase product stock for returned quantity in store method
-                if ($product = Product::find($sales_list->product_id)) {
-                    $product->increaseStock(
-                        date('Y-m-d', strtotime($request->date)),
-                        $request->store_id,
-                        $request->return_qty[$sales_list_id],
-                        $sales_list->rate,
-                        "Sales Return #{$sales_return->return_no}",
-                        "Stock increased due to sales return"
-                    );
-                }
+               
             }
 
-            $client = Client::find($request->client_id);
-            $admin_settings = AdminSetting::first();
-            if (@$admin_settings->accounting == 1 && $client->coa) {
-                $headCode = collect([
-                    '0' => 30102,
-                    '1' => $client->coa->head_code
-                ]);
-
-                $debit_amount = collect([
-                    '0' => $amount,
-                    '1' => 0.00
-                ]);
-
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $amount,
-                ]);
-
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'voucher_no' => $sales_return->return_no,
-                        'voucher_type' => "Sales Return",
-                        'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Sales Return Against RETURN NO - ' . $sales_return->return_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
-                        'created_by' => Auth::user()->id,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ];
-                }
-                AccountTransactionAuto::insert($postData);
-            }
-
-            $store = Store::find($request->store_id);
-            $products_info = '';
-            foreach ($request->sales_list_id as $sales_list_id) {
-                $sales_list = SalesList::findOrFail($sales_list_id);
-                $product = Product::find($sales_list->product_id);
-                $products_info .= ' ' . $product->name . ' Quanity : ' . $request->return_qty[$sales_list_id] . ' ' . $product->attribute->name;
-            }
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Sales Return',
-                'action' => 'Add',
-                'description' => 'Create a new sales Return with Return no ' . $sales_return->return_no . ' from client ' . $client->name . ' to store ' . $store->name . ' sales return amount is ' . $sales_return->amount . ' products ' . $products_info . ' for reason ' . $request->remarks,
-                'user_id' => Auth::user()->id,
-            ]);
+            
         });
         return redirect()->Route('admin.sales-return.index')->withSuccessMessage('Created Successfully!');
     }

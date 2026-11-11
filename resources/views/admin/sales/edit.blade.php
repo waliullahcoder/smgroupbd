@@ -3,7 +3,10 @@
 
 @section('content')
 
+    <input type="hidden" name="sales_by" value="manual">
+    <input type="hidden" name="sales_type" id="sales_type" value="credit">
     <input type="hidden" id="store_id" name="store_id" value="1">
+    <input type="hidden" id="stock" value="0">
 
     <div class="row g-3">
 

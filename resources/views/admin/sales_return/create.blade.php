@@ -23,16 +23,7 @@
             <input type="text" class="form-control" id="return_no" name="return_no" placeholder="Return No"
                 value="{{ $return_no }}" readonly required>
         </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-            <label for="store_id" class="form-label"><b>Store <span class="text-danger">*</span></b></label>
-            <select name="store_id" id="store_id" class="select form-select" data-placeholder="Select Store" required>
-                @foreach ($stores as $store)
-                    <option value="{{ $store->id }}"
-                        {{ old('store_id') && old('store_id') == $store->id ? 'selected' : '' }}>{{ $store->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+       <input type="hidden" id="store_id" name="store_id" value="1">
         <div class="col-sm-6">
             <label for="product_id" class="form-label"><b>Products</b></label>
             <select name="product_id" id="product_id" class="select form-select" data-placeholder="Select Proudcts"

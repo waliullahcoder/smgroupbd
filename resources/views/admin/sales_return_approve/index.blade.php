@@ -15,7 +15,6 @@
                     @endif
                     <th>Product Type</th>
                     <th>Client</th>
-                    <th>Store</th>
                     <th>Return Date</th>
                     <th>Amount</th>
                     <th>Staff</th>
@@ -62,10 +61,6 @@
                     {
                         data: 'client.name',
                         name: 'client.name'
-                    },
-                    {
-                        data: 'store.name',
-                        name: 'store.name'
                     },
                     {
                         data: 'date',

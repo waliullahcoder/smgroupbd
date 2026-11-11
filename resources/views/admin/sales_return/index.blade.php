@@ -15,7 +15,6 @@
                         <th>Company</th>
                     @endif
                     <th>Client</th>
-                    <th>Store</th>
                     <th>Return Date</th>
                     <th>Amount</th>
                     <th>Staff</th>
@@ -40,7 +39,7 @@
                                 </div>
                             </div>
                         </th>
-                        <th class="text-end" colspan="{{ Auth::user()->hasRole('Software Admin') ? '8' : '7' }}">
+                        <th class="text-end" colspan="{{ Auth::user()->hasRole('Software Admin') ? '7' : '6' }}">
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
                                 id="bulk_delete" class="btn btn btn-xs btn-danger">Delete</button>
                             <button type="button" name="bulk_delete" data-url="{{ Route($delete_link, '0') }}"
@@ -83,10 +82,6 @@
                     @endif {
                         data: 'client.name',
                         name: 'client.name'
-                    },
-                    {
-                        data: 'store.name',
-                        name: 'store.name'
                     },
                     {
                         data: 'date',

@@ -52,59 +52,175 @@ class SalesController extends Controller
     public function index()
     {
         if (request()->ajax()) {
-            $model = Sales::with(['company', 'store', 'client', 'staff'])->where('product_type', 'Consumer')->whereNotIn('sales_type', ['POS', 'running'])->latest('id');
+           $model = Sales::with(['company', 'store', 'client', 'staff'])
+                ->where('product_type', 'Consumer')
+                ->whereNotIn('sales_type', ['POS', 'running'])
+                ->latest('id');
+
             if (!is_null(request('invoice'))) {
                 $model->where('invoice', request('invoice'));
             } else {
-                $date = !is_null(request('sales_date')) ? date('Y-m-d', strtotime(request('sales_date'))) : date('Y-m-d');
-                // $model->where('date', $date);
+                $date = !is_null(request('sales_date'))
+                    ? date('Y-m-d', strtotime(request('sales_date')))
+                    : date('Y-m-d');
             }
+
             $type = request('type');
+
             if (!empty($type) && $type == 'trash') {
                 $model->onlyTrashed();
             }
+
             return DataTables::eloquent($model)
                 ->addColumn('checkbox', function ($row) {
-                    $collection_data = CollectionData::with('collection')->whereHas('collection')->where('sales_id', $row->id)->first();
-                    $transaction = AccountTransaction::withTrashed()->where('voucher_no', $row->invoice)->where('voucher_type', 'Sales')->first();
-                    $coll_transaction = AccountTransaction::withTrashed()->where('voucher_no', @$collection_data->collection->payment_no)->where('voucher_type', 'Collection')->first();
-                    $sales_return = SalesReturnList::with('sales_list')->whereHas('sales_list', function ($query) use ($row) {
-                        $query->where('sales_id', $row->id);
-                    })->first();
+
+                    $collection_data = CollectionData::with('collection')
+                        ->whereHas('collection')
+                        ->where('sales_id', $row->id)
+                        ->first();
+
+                    $transaction = AccountTransaction::withTrashed()
+                        ->where('voucher_no', $row->invoice)
+                        ->where('voucher_type', 'Sales')
+                        ->first();
+
+                    $coll_transaction = AccountTransaction::withTrashed()
+                        ->where('voucher_no', @$collection_data->collection->payment_no)
+                        ->where('voucher_type', 'Collection')
+                        ->first();
+
+                    $sales_return = SalesReturnList::with('sales_list')
+                        ->whereHas('sales_list', function ($query) use ($row) {
+                            $query->where('sales_id', $row->id);
+                        })->first();
+
                     $delivery = DeliveryList::where('sales_id', $row->id)->first();
-                    if (is_null($collection_data) && is_null($transaction) && is_null($coll_transaction) && is_null($sales_return) && is_null($delivery)) {
-                        $checkbox = '<div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input ' . (!empty(request('type')) && request('type') == "trash" ? 'trash_multi_checkbox' : 'multi_checkbox') . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                        return $checkbox;
-                    }
+
+                    // if (
+                    //     is_null($collection_data) &&
+                    //     is_null($transaction) &&
+                    //     is_null($coll_transaction) &&
+                    //     is_null($sales_return) &&
+                    //     is_null($delivery)
+                    // ) {
+                    //     return '<div class="custom-control custom-checkbox">
+                    //         <input type="checkbox" class="' .
+                    //         (!empty(request('type')) && request('type') == "trash"
+                    //             ? 'trash_multi_checkbox'
+                    //             : 'multi_checkbox') .
+                    //         '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '">
+                    //         <label for="' . $row->id . '" class="custom-control-label"></label>
+                    //     </div>';
+                    // }
+
+                    return '';
                 })
-                ->addColumn('date', function ($row) {
+
+               ->addColumn('date', function ($row) {
                     return date('d-m-Y', strtotime($row->date));
                 })
+
+                ->addColumn('staff_name', function ($row) {
+                    return optional($row->staff)->name ?? '-';
+                })
+
+                // Discount
+                ->addColumn('discount', function ($row) {
+                    return number_format($row->discount ?? 0, 2);
+                })
+
+                // Discount
+                ->addColumn('discount', function ($row) {
+                    return number_format($row->discount ?? 0, 2);
+                })
+
+                // Tax Percentage
+                ->addColumn('tax', function ($row) {
+                    return number_format($row->tax ?? 0, 2) . '%';
+                })
+                
+
+                // Tax Amount
+                ->addColumn('tax_amount', function ($row) {
+                    return number_format($row->tax_amount ?? 0, 2);
+                })
+
+                
+
+                // Net Payable (Tax Included)
+                ->addColumn('net_amount', function ($row) {
+                    return number_format(
+                        $row->net_amount ?? (
+                            ($row->total_amount ?? 0) -
+                            ($row->discount ?? 0) +
+                            ($row->tax_amount ?? 0)
+                        ),
+                        2
+                    );
+                })
+
                 ->addColumn('actions', function ($row) {
+
                     $type = request('type');
-                    $collection_data = CollectionData::with('collection')->whereHas('collection')->where('sales_id', $row->id)->first();
+
+                    $collection_data = CollectionData::with('collection')
+                        ->whereHas('collection')
+                        ->where('sales_id', $row->id)
+                        ->first();
+
                     $data = [
                         'id' => $row->id,
                         'edit' => !empty($type) && $type == 'trash' ? false : true,
                     ];
+
                     $addiotional_buttons = '';
-                    $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-1" href="' . Route('admin.sales.show', $row->id) . '" target="_blank"  data-bs-toggle="tooltip" data-bs-placement="top" title="Chalan"><i class="fal fa-print"></i></a>';
-                    $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-2" href="' . Route('admin.sales.invoice', $row->id) . '" target="_blank"  data-bs-toggle="tooltip" data-bs-placement="top" title="Invoice"><i class="fal fa-file-pdf"></i></a>';
+
+                    $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-1"
+                        href="' . Route('admin.sales.show', $row->id) . '"
+                        target="_blank" data-bs-toggle="tooltip" title="Chalan">
+                        <i class="fal fa-print"></i></a>';
+
+                    $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-2"
+                        href="' . Route('admin.sales.invoice', $row->id) . '"
+                        target="_blank" data-bs-toggle="tooltip" title="Invoice">
+                        <i class="fal fa-file-pdf"></i></a>';
+
                     if (@$row->client->is_vat == 1) {
-                        $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-3" href="' . Route('admin.sales.vat', $row->id) . '" target="_blank"  data-bs-toggle="tooltip" data-bs-placement="top" title="Vat Chalan"><i class="fal fa-print-search"></i></a>';
+                        $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-3"
+                            href="' . Route('admin.sales.vat', $row->id) . '"
+                            target="_blank" data-bs-toggle="tooltip" title="Vat Chalan">
+                            <i class="fal fa-print-search"></i></a>';
                     }
-                    $transaction = AccountTransaction::withTrashed()->where('voucher_no', $row->invoice)->where('voucher_type', 'Sales')->first();
-                    $coll_transaction = AccountTransaction::withTrashed()->where('voucher_no', @$collection_data->collection->payment_no)->where('voucher_type', 'Collection')->first();
-                    $sales_return = SalesReturnList::with('sales_list')->whereHas('sales_list', function ($query) use ($row) {
-                        $query->where('sales_id', $row->id);
-                    })->first();
+
+                    $transaction = AccountTransaction::withTrashed()
+                        ->where('voucher_no', $row->invoice)
+                        ->where('voucher_type', 'Sales')
+                        ->first();
+
+                    $coll_transaction = AccountTransaction::withTrashed()
+                        ->where('voucher_no', @$collection_data->collection->payment_no)
+                        ->where('voucher_type', 'Collection')
+                        ->first();
+
+                    $sales_return = SalesReturnList::with('sales_list')
+                        ->whereHas('sales_list', function ($query) use ($row) {
+                            $query->where('sales_id', $row->id);
+                        })->first();
+
                     $delivery = DeliveryList::where('sales_id', $row->id)->first();
-                    if (is_null($transaction) && is_null($coll_transaction) && is_null($sales_return) && is_null($delivery)) {
+
+                    if (
+                        is_null($transaction) &&
+                        is_null($coll_transaction) &&
+                        is_null($sales_return) &&
+                        is_null($delivery)
+                    ) {
                         return ActionButtons::actions($data, $addiotional_buttons);
                     }
+
                     return '<div class="btn-group">' . $addiotional_buttons . '</div>';
                 })
+
                 ->rawColumns(['checkbox', 'actions'])
                 ->make(true);
         }
@@ -241,6 +357,8 @@ class SalesController extends Controller
                 $sales = Sales::create([
                     'company_id' => $request->company_id,
                     'branch_id' => $request->project_id,
+                    'tax' => $request->tax,
+                    'tax_amount' => $request->tax_amount,
                     'store_id' => $request->store_id,
                     'client_id' => $request->client_id,
                     'coa_setup_id' => $request->coa_setup_id,
@@ -481,9 +599,9 @@ class SalesController extends Controller
 
             if (is_array($request->product_id) && in_array($product_id, $request->product_id)) {
                 $total_qty = $request->qty[$product_id] + 1;
-                if ($stock < $total_qty) {
-                    return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
-                }
+                // if ($stock < $total_qty) {
+                //     return response()->json(['status' => 'error', 'data' => 'Stock Insuficient!']);
+                // }
                 $price = $request->rate[$product_id];
                 $amount = $total_qty * $price;
                 return response()->json(['status' => 'increment', 'product_id' => $product_id, 'total_qty' => $total_qty, 'amount' => $amount]);
@@ -573,7 +691,6 @@ class SalesController extends Controller
             'invoice' => 'required',
             'date' => 'required',
             'client_id' => 'required',
-            'store_id' => 'required',
             'product_id' => 'required',
             'qty' => 'required',
         ]);
@@ -594,10 +711,11 @@ class SalesController extends Controller
                     $collection->forceDelete();
                 }
                 SalesList::where('sales_id', $id)->delete();
-
                 $sales->update([
                     'company_id' => $request->company_id,
                     'branch_id' => $request->project_id,
+                    'tax' => $request->tax,
+                    'tax_amount' => $request->tax_amount,
                     'store_id' => $request->store_id,
                     'client_id' => $request->client_id,
                     'coa_setup_id' => $request->coa_setup_id,
@@ -607,16 +725,16 @@ class SalesController extends Controller
                     'total_amount' => $request->total_amount,
                     'discount' => $request->discount,
                     'total_paid' => $request->sales_type == 'cash' ? $request->net_amount : 0,
-                    'staff_id' => $request->staff_id,
+                    'staff_id' => Auth::user()->id,
                     'updated_by' => Auth::user()->id,
                 ]);
 
                 foreach ($request->product_id as $product_id) {
                     $stock = HelperClass::stock($product_id, $request->store_id);
-                    if ($request->qty[$product_id] > $stock) {
-                        $product = Product::find($product_id);
-                        throw new Exception('stock not available please decrease quantity for ' . $product->name);
-                    } else {
+                    // if ($request->qty[$product_id] > $stock) {
+                    //     $product = Product::find($product_id);
+                    //     throw new Exception('stock not available please decrease quantity for ' . $product->name);
+                    // } else {
                         $discount = ($request->discount / $request->total_amount) * $request->amount[$product_id];
                         SalesList::create([
                             'company_id' => Auth::user()->company_id ?? 1,
@@ -630,123 +748,12 @@ class SalesController extends Controller
                             'discount' => $discount,
                             'collection' => $request->sales_type == 'cash' ? ($request->amount[$product_id] - $discount) : 0.00,
                         ]);
-                    }
+                    // }
                 }
 
-                $client = Client::find($request->client_id);
-                if (@$admin_setting->accounting == 1 && $client->coa) {
-                    $income_head = CoaSetup::where('head_type', 'I')->where('head_name', 'Whole Sale')->first();
-                    $headCode = collect([
-                        '0' => $client->coa->head_code,
-                        '1' => $income_head->head_code,
-                    ]);
-
-                    $debit_amount = collect([
-                        '0' => $request->net_amount,
-                        '1' => 0.00
-                    ]);
-
-                    $credit_amount = collect([
-                        '0' => 0.00,
-                        '1' => $request->net_amount,
-                    ]);
-
-                    $countHead = count($headCode);
-                    $postData = [];
-                    for ($i = 0; $i < $countHead; $i++) {
-                        $coa = CoaSetup::where('company_id', (Auth::user()->company_id ?? 1))->where('head_code', $headCode[$i])->first();
-                        $postData[] = [
-                            'company_id' => Auth::user()->company_id ?? 1,
-                            'voucher_no' => $sales->invoice,
-                            'voucher_type' => "Sales",
-                            'voucher_date' => date('Y-m-d', strtotime($request->date)),
-                            'coa_setup_id' => $coa->id,
-                            'coa_head_code' => $headCode[$i],
-                            'narration' => 'Product Sales Against Invoice No - ' . $sales->invoice,
-                            'debit_amount' => $debit_amount[$i],
-                            'credit_amount' => $credit_amount[$i],
-                            'created_by' => Auth::user()->id,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => Carbon::now()
-                        ];
-                    }
-                    AccountTransactionAuto::insert($postData);
-                }
-
-                if ($request->sales_type == 'cash') {
-                    $first = date('Y-m-01');
-                    $last = new Carbon('last day of this month');
-                    $pay_data = Collection::withoutGlobalScope(CompanyScope::class)->withTrashed()->select(['payment_no'])->whereDate('created_at', '>=', $first)->whereDate('created_at', '<=', $last)->orderBy('id', 'desc')->first();
-                    if ($pay_data) {
-                        $trim = str_replace("STC", '', $pay_data->payment_no);
-                        $dataPrefix = (int)$trim + 1;
-                        $payment_no = "STC" . $dataPrefix;
-                    } else {
-                        $payment_no = "STC" . date('y') . date('m') . '000001';
-                    }
-
-                    $collection = Collection::create([
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'client_id' => $request->client_id,
-                        'payment_no' => $payment_no,
-                        'amount' => $request->net_amount,
-                        'payment_date' => date('Y-m-d', strtotime($request->date)),
-                        'collection_type' => 'collection',
-                        'payment_type' => $request->sales_type,
-                        'remarks' => 'Paid on Sale',
-                        'sales_id' => $sales->id,
-                        'created_by' => Auth::user()->id,
-                    ]);
-
-                    CollectionData::create([
-                        'collection_id' => $collection->id,
-                        'sales_id' => $sales->id,
-                        'amount' => $request->net_amount,
-                    ]);
-
-                    if (@$admin_setting->accounting == 1 && $client->coa) {
-                        $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                        $headCode = collect([
-                            '0' => $cash_head->head_code,
-                            '1' => $client->coa->head_code
-                        ]);
-
-                        $postData = [];
-                        for ($i = 0; $i < $countHead; $i++) {
-                            $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                            $postData[] = [
-                                'company_id' => Auth::user()->company_id ?? 1,
-                                'voucher_no' => $payment_no,
-                                'voucher_type' => "Collection",
-                                'voucher_date' => date('Y-m-d', strtotime($request->date)),
-                                'coa_setup_id' => $coa->id,
-                                'coa_head_code' => $headCode[$i],
-                                'narration' => 'Collection Against PAYMENT NO - ' . $payment_no,
-                                'debit_amount' => $debit_amount[$i],
-                                'credit_amount' => $credit_amount[$i],
-                                'created_by' => Auth::user()->id,
-                                'created_at' => Carbon::now(),
-                                'updated_at' => Carbon::now()
-                            ];
-                        }
-                        AccountTransactionAuto::insert($postData);
-                    }
-                }
-
-                $store = Store::find($request->store_id);
-                $products_info = '';
-                foreach ($request->product_id as $product_id) {
-                    $product = Product::find($product_id);
-                    $products_info .= ' ' . $product->name . ' Quanity : ' . $request->qty[$product_id] . ' ' . $product->attribute->name;
-                }
-
-                AccessLog::create([
-                    'date_time' => Carbon::now(),
-                    'page' => 'Sales',
-                    'action' => 'Update',
-                    'description' => 'Update sales against invoice no ' . $sales->invoice . ' to client ' . $client->name . ' from store ' . $store->name . ' sales amount is ' . $sales->total_amount . ' sales discount ' . $sales->discount . ' products ' . $products_info . ' on ' . (($request->sales_type == 'cash') ? 'cash sale' : 'credit sale'),
-                    'user_id' => Auth::user()->id,
-                ]);
+              
+               
+               
             });
 
             return redirect()->Route('admin.sales.index')->withSuccessMessage('Created Successfully!');
