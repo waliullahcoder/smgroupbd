@@ -175,10 +175,10 @@ class SalesController extends Controller
 
                     $addiotional_buttons = '';
 
-                    $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-1"
-                        href="' . Route('admin.sales.show', $row->id) . '"
-                        target="_blank" data-bs-toggle="tooltip" title="Chalan">
-                        <i class="fal fa-print"></i></a>';
+                    // $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-1"
+                    //     href="' . Route('admin.sales.show', $row->id) . '"
+                    //     target="_blank" data-bs-toggle="tooltip" title="Chalan">
+                    //     <i class="fal fa-print"></i></a>';
 
                     $addiotional_buttons .= '<a class="btn btn-sm border-0 text-white tt btn-print-2"
                         href="' . Route('admin.sales.invoice', $row->id) . '"
@@ -513,6 +513,7 @@ class SalesController extends Controller
     /**
      * Display the specified resource.
      */
+
     public function invoice(string $id)
     {
         if (Auth::user()->company_id) {
@@ -527,18 +528,61 @@ class SalesController extends Controller
             $title = 'Company Name Goes Here.';
             $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
         }
+
         $data = Sales::findOrFail($id);
 
-        $total_sale_amount = Sales::whereNotIn('id', [$id])->where('client_id', $data->client_id)->sum('total_amount');
-        $total_discount_amount = Sales::whereNotIn('id', [$id])->where('client_id', $data->client_id)->sum('discount');
-        $total_paid_amount = Collection::where('client_id', $data->client_id)->where('payment_no', '!=', $data->invoice)->where('collection_type', '!=', 'adjust')->sum('amount');
-        $opening = $total_sale_amount - ($total_discount_amount + $total_paid_amount);
+        // Current invoice calculation
+        $subtotal       = $data->total_amount - $data->discount;          // total - discount
+        $tax_percent    = (float) ($data->tax ?? 0);
+        $tax_amount     = (float) ($data->tax_amount ?? 0);
+        $net_amount     = $subtotal + $tax_amount;                        // net invoice amount
+
+        // Previous sales (net = total - discount + tax)
+        $previous_sale_amount = Sales::whereNotIn('id', [$id])
+            ->where('client_id', $data->client_id)
+            ->sum(DB::raw('total_amount - discount + COALESCE(tax_amount, 0)'));
+
+        $total_paid_amount = Collection::where('client_id', $data->client_id)
+            ->where('payment_no', '!=', $data->invoice)
+            ->where('collection_type', '!=', 'adjust')
+            ->sum('amount');
+
+        $opening = $previous_sale_amount - $total_paid_amount;
 
         $report_title = 'Invoice';
-        // return view('admin.sales.invoice', compact('title', 'logo', 'informations', 'hotline', 'report_title', 'data', 'opening'));
-        $pdf = Pdf::loadView('admin.sales.invoice', compact('title', 'logo', 'informations', 'hotline', 'report_title', 'data', 'opening'));
-        // $pdf->setPaper('A4', 'landscape');
-        return $pdf->stream('sales_invoice_' . date('d_m_Y_H_i_s') . '.pdf');
+
+        return view('admin.sales.invoice', compact(
+            'title',
+            'logo',
+            'informations',
+            'hotline',
+            'report_title',
+            'data',
+            'opening',
+            'subtotal',
+            'tax_percent',
+            'tax_amount',
+            'net_amount'
+        ));
+
+        // $pdf = Pdf::loadView('admin.sales.invoice', compact(
+        //     'title',
+        //     'logo',
+        //     'informations',
+        //     'hotline',
+        //     'report_title',
+        //     'data',
+        //     'opening',
+        //     'subtotal',
+        //     'tax_percent',
+        //     'tax_amount',
+        //     'net_amount'
+        // ));
+
+        
+
+        // // $pdf->setPaper('A4', 'landscape');
+        // return $pdf->stream('sales_invoice_' . date('d_m_Y_H_i_s') . '.pdf');
     }
 
     /**

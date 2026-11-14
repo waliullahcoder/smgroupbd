@@ -2,10 +2,28 @@
 
 @section('content')
     <div class="row g-3">
+        <input type="hidden" name="collection_type" id="collection_type" value="advance">
+        <div class="col-lg-4 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
+                <option value=""></option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}">{{ $company->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required disabled>
+                <option value=""></option>
+            </select>
+        </div>
         <div class="col-lg-4 col-sm-6">
             <label for="client_id" class="form-label"><b>Client <span class="text-danger">*</span></b></label>
             <select name="client_id" id="client_id" class="select form-select" data-placeholder="Selct Client" required>
-                <option value=""></option>
                 @foreach ($clients as $client)
                     <option value="{{ $client->id }}"
                         {{ old('client_id') && old('client_id') == $client->id ? 'selected' : '' }}>{{ $client->name }}
@@ -23,7 +41,7 @@
             <input type="text" class="form-control date_picker" id="payment_date" name="payment_date"
                 value="{{ date('d-m-Y', strtotime(old('payment_date'))) }}" placeholder="Payment Date" required>
         </div>
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-lg-4 col-sm-6">
             <label for="payment_type" class="form-label"><b>Payment Type <span class="text-danger">*</span></b></label>
             <select name="payment_type" id="payment_type" class="select form-select" required>
                 <option value="Cash" {{ old('payment_type') && old('payment_type') == 'Cash' ? 'selected' : '' }}>Cash
@@ -32,7 +50,7 @@
                 </option>
             </select>
         </div>
-        <div class="col-lg-3 col-sm-6">
+        <div class="col-lg-4 col-sm-6">
             <label for="coa_setup_id" class="form-label"><b>Account Heads <span class="text-danger">*</span></b></label>
             <select name="coa_setup_id" id="coa_setup_id" class="select form-select" data-placeholder="Select Account Head"
                 required>
@@ -43,21 +61,8 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-lg-3 col-sm-6">
-            <label for="collection_type" class="form-label"><b>Collection Type <span
-                        class="text-danger">*</span></b></label>
-            <select name="collection_type" id="collection_type" class="select form-select" required>
-                <option value="advance"
-                    {{ old('collection_type') && old('collection_type') == 'advance' ? 'selected' : '' }}>Advance</option>
-                <option value="adjust"
-                    {{ old('collection_type') && old('collection_type') == 'adjust' ? 'selected' : '' }}>
-                    Adjust</option>
-                <option value="collection"
-                    {{ old('collection_type') && old('collection_type') == 'collection' ? 'selected' : '' }}>Collection
-                </option>
-            </select>
-        </div>
-        <div class="col-lg-3 col-sm-6">
+        
+        <div class="col-lg-4 col-sm-6">
             <label for="balance" class="form-label"><b>Balance</b></label>
             <input type="text" class="form-control" id="balance" name="balance" placeholder="Balance" readonly
                 value="{{ old('balance') ? old('balance') : 0 }}">
@@ -65,7 +70,7 @@
         <div class="col-lg-4 col-sm-6">
             <label for="staff_id" class="form-label"><b>Staff <span class="text-danger">*</span></b></label>
             <select name="staff_id" id="staff_id" class="select form-select" data-placeholder="Select Staff" required>
-                <option value=""></option>
+              
                 @foreach ($staffs as $staff)
                     <option value="{{ $staff->id }}" {{ Auth::user()->staff_id == $staff->id ? 'selected' : '' }}>
                         {{ $staff->name }}
@@ -73,39 +78,16 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-lg-4 col-sm-6">
+        <div class="col-lg-8 col-sm-6">
             <label for="remarks" class="form-label"><b>Remarks</b></label>
             <input type="text" class="form-control" id="remarks" name="remarks" placeholder="Remarks">
         </div>
         <div class="col-lg-4 col-sm-6">
-            <label for="total_collection" class="form-label"><b>Total Collection</b></label>
+            <label for="total_collection" class="form-label"><b>Total Collection (Tk.)</b></label>
             <input type="text" class="form-control" id="total_collection" name="total_collection" value="0"
                 placeholder="Total Collection">
         </div>
-        <div class="col-12">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle mb-0">
-                    <thead class="bg-primary text-white align-middle text-nowrap">
-                        <tr>
-                            <th class="text-center">SL#</th>
-                            <th>Invoice No</th>
-                            <th class="text-center">Sale Amount</th>
-                            <th class="text-center">Previous Collection</th>
-                            <th class="text-center">Current Collection</th>
-                            <th class="text-center">Due Amount</th>
-                            <th>
-                                <div class="custom-control custom-checkbox w-fit mx-auto">
-                                    <input type="checkbox" class="custom-control-input" name="selectAll" id="checkAll">
-                                    <label for="checkAll" class="custom-control-label"></label>
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody" style="display: none;">
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        
     </div>
 @endsection
 
@@ -331,4 +313,32 @@
             });
         });
     </script>
+@endpush
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

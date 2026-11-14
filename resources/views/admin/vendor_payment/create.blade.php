@@ -2,6 +2,7 @@
 
 @section('content')
     <div class="row g-3">
+         <input type="hidden" name="type" id="type" value="advance">
         <div class="col-lg-6 col-sm-6">
             <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
             <select name="company_id" id="company_id" class="select form-select"
@@ -68,25 +69,17 @@
                 </select>
             </div>
         @endif
-        <div class="col-md-4 col-sm-6">
-            <label for="type" class="form-label"><b>Type <span class="text-danger">*</span></b></label>
-            <select name="type" id="type" class="select form-select" required>
-                 <option value="payment" {{ old('type') && old('type') == 'payment' ? 'selected' : '' }}>Payment</option>
-                <option value="advance" {{ old('type') && old('type') == 'advance' ? 'selected' : '' }}>Advance</option>
-               
-                <option value="adjust" {{ old('type') && old('type') == 'adjust' ? 'selected' : '' }}>Adjust</option>
-            </select>
-        </div>
+       
         <div class="col-md-4 col-sm-6">
             <label for="remarks" class="form-label"><b>Remarks</b></label>
             <input type="text" class="form-control" id="remarks" name="remarks" placeholder="Remarks">
         </div>
-        <div class="col-md-2 col-6">
+        <div class="col-md-4 col-6">
             <label for="due" class="form-label"><b>Due</b></label>
             <input type="text" class="form-control" id="due" name="due" placeholder="Due" readonly
                 value="0">
         </div>
-        <div class="col-md-2 col-6">
+        <div class="col-md-4 col-6">
             <label for="advance" class="form-label"><b>Advance</b></label>
             <input type="text" class="form-control" id="advance" name="advance" placeholder="Advance" readonly
                 value="0">
@@ -97,28 +90,7 @@
             <input type="text" class="form-control" id="total_paid" name="total_paid" value="0"
                 placeholder="Total Payment">
         </div>
-        <div class="col-12">
-            <table class="table table-bordered table-striped align-middle mb-0">
-                <thead class="bg-primary text-white">
-                    <tr>
-                        <th width="30" class="text-center py-1">SL#</th>
-                        <th class="py-1">Lifting No</th>
-                        <th class="py-1">Lifting Amount</th>
-                        <th class="py-1">Previous Payment</th>
-                        <th class="py-1">Due Amount</th>
-                        <th class="py-1">Current Payment</th>
-                        <th width="60" class="text-center py-1">
-                            <div class="custom-control custom-checkbox w-fit mx-auto ps-3">
-                                <input type="checkbox" class="custom-control-input" name="selectAll" id="checkAll">
-                                <label for="checkAll" class="custom-control-label"></label>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="tbody">
-                </tbody>
-            </table>
-        </div>
+        
     </div>
 @endsection
 

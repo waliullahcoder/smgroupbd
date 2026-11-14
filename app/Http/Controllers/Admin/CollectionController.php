@@ -12,6 +12,7 @@ use App\Models\SalesReturn;
 use App\Models\CollectionData;
 use App\Models\Company;
 use App\Models\Sales;
+use App\Models\Branch;
 use App\Models\Scopes\CompanyScope;
 use App\Models\Staff;
 use App\Services\ActionButtons\ActionButtons;
@@ -97,6 +98,7 @@ class CollectionController extends Controller
      */
     public function create(Request $request)
     {
+      
         if ($request->ajax() && $request->has('get_heads')) {
             if ($request->type == 'Cash') {
                 $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
@@ -112,18 +114,20 @@ class CollectionController extends Controller
         }
 
         if ($request->ajax()) {
+                
             $client = Client::findOrFail($request->client_id);
             if (is_null($client->chain_client_id)) {
                 $client_id = [$request->client_id];
             } else {
                 $client_id = Client::where('chain_client_id', $client->chain_client_id)->get(['id'])->pluck('id');
             }
+          
             $total_sale_amount = Sales::whereIn('client_id', $client_id)->sum(DB::raw('total_amount - discount'));
             $total_paid_amount = Collection::whereIn('client_id', $client_id)->where('collection_type', '!=', 'adjust')->sum('amount');
             $returnAmount = SalesReturn::whereIn('client_id', $client_id)->sum('amount');
             $balance = ($total_paid_amount + $returnAmount) - $total_sale_amount;
-
-            $sales = DB::table('view_collectionable_sales')->where('collectionable_amount', '>', 0)->where('client_id', $request->client_id)->get();
+   
+            $sales = DB::table('Sales')->where('total_amount', '>', 0)->where('client_id', $request->client_id)->get();
             return response()->json(['status' => 'success', 'balance' => $balance, 'sales' => $sales]);
         }
 
@@ -134,7 +138,8 @@ class CollectionController extends Controller
         $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
             $query->where('head_name', 'Cash In Hand');
         })->get();
-        return view('admin.collection.create', compact('title', 'clients', 'staffs', 'payment_no', 'cash_heads'));
+        $companies = Company::orderBy('name', 'asc')->get();
+        return view('admin.collection.create', compact('title', 'clients', 'staffs', 'payment_no', 'cash_heads','companies'));
     }
 
     /**
@@ -154,131 +159,54 @@ class CollectionController extends Controller
             return redirect()->back()->withErrors('Collection amount must be greater than 0!');
         }
 
-        if ($request->collection_type == 'collection' || $request->collection_type == 'adjust') {
-            $request->validate([
-                'sales_id' => 'required',
-            ]);
-        }
-
-        $client = Client::findOrFail($request->client_id);
-        if (is_null($client->chain_client_id)) {
-            $client_id = [$request->client_id];
-        } else {
-            $client_id = Client::where('chain_client_id', $client->chain_client_id)->get(['id'])->pluck('id');
-        }
-
-        $amount = 0;
-        if ($request->collection_type != 'advance') {
-            foreach ($request->collection as $collection) {
-                $amount += $collection;
-            }
-        } else {
-            $amount = $request->total_collection;
-        }
-
-        if ($amount == 0) {
+        if ($request->total_collection == 0) {
             return redirect()->back()->withErrors('Collection amount must be greater than 0');
         }
 
         $total_sale_amount = Sales::where('client_id', $request->client_id)->sum(DB::raw('sales.total_amount - sales.discount'));
-        $total_sale_amount = Sales::whereIn('client_id', $client_id)->sum(DB::raw('sales.total_amount - sales.discount'));
-        $total_paid_amount = Collection::whereIn('client_id', $client_id)->where('collection_type', '!=', 'adjust')->sum('amount');
-        $returnAmount = SalesReturn::whereIn('client_id', $client_id)->sum('amount');
+        $total_sale_amount = Sales::where('client_id', $request->client_id)->sum(DB::raw('sales.total_amount - sales.discount'));
+        $total_paid_amount = Collection::where('client_id', $request->client_id)->where('collection_type', '!=', 'adjust')->sum('amount');
+        $returnAmount = SalesReturn::where('client_id', $request->client_id)->sum('amount');
         $balance = ($total_paid_amount + $returnAmount) - $total_sale_amount;
 
-        if ($request->collection_type == 'adjust' && $balance < $amount) {
-            return redirect()->back()->withErrors('Your balance is lower than adjustment amount!');;
-        }
-
-        DB::transaction(function () use ($request, $amount) {
+      
+        DB::transaction(function () use ($request) {
             $payment_no = $this->invoice();
             $collection = Collection::create([
-                'company_id' => Auth::user()->company_id ?? 1,
+                'company_id' => $request->company_id,
+                'branch_id' => $request->project_id,
                 'client_id' => $request->client_id,
+                'coa_setup_id' => $request->coa_setup_id,
                 'payment_no' => $payment_no,
                 'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
-                'collection_type' => $request->collection_type,
+                'collection_type' => 'Collection',
                 'payment_type' => $request->payment_type,
-                'amount' => $amount,
+                'amount' => $request->total_collection,
                 'remarks' => $request->remarks,
                 'created_by' => Auth::user()->id,
                 'staff_id' => $request->staff_id,
             ]);
-
-            $invoices = [];
-            if ($request->collection_type == 'collection' || $request->collection_type == 'adjust') {
-                foreach ($request->sales_id as $sales_id) {
-                    $sales = Sales::findOrFail($sales_id);
-                    $collection_amount = $sales->total_paid + $request->collection[$sales_id];
-                    $sales->update(['total_paid' => $collection_amount]);
-                    $invoices[] = $sales->invoice;
-
-                    CollectionData::create([
-                        'collection_id' => $collection->id,
-                        'sales_id' => $sales_id,
-                        'amount' => $request->collection[$sales_id],
-                    ]);
-                }
-            }
-
-            $client = Client::find($request->client_id);
-            if ($client->coa) {
-                $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                $headCode = collect([
-                    '0' => $cash_head->head_code,
-                    '1' => $client->coa->head_code
-                ]);
-
-                $debit_amount = collect([
-                    '0' => $amount,
-                    '1' => 0.00
-                ]);
-
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $amount,
-                ]);
-
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
+            if ($request->coa_setup_id) {
+                $coa = CoaSetup::findOrFail($request->coa_setup_id);
+                   $postData[] = [
+                        'company_id' => $request->company_id,
+                        'branch_id' => $request->project_id,
                         'voucher_no' => $payment_no,
                         'voucher_type' => "Collection",
                         'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
+                        'coa_setup_id' => $request->coa_setup_id,
+                        'coa_head_code' => $coa->head_name,
                         'narration' => 'Collection Against PAYMENT NO - ' . $payment_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
+                        'debit_amount' => 0,
+                        'credit_amount' => $request->total_collection,
                         'created_by' => Auth::user()->id,
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now()
                     ];
-                }
+                
                 AccountTransactionAuto::insert($postData);
             }
 
-            $unique_invoices = array_unique($invoices);
-            $filtered_invoices = implode(',', $unique_invoices);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Collection',
-                'action' => 'Add',
-                'description' => 'Create a new Collection with payment no ' . $collection->payment_no . ' from client ' . $client->name . ' collection amount is ' . $collection->amount . ' collection type ' . $request->collection_type . ($request->collection_type != 'advance' ? ' and sales invoices are ' . $filtered_invoices : ''),
-                'user_id' => Auth::user()->id,
-            ]);
-
-            // if (substr($client->phone, 0, 1) == 0 && strlen($client->phone) == 11) {
-            //     $msisdn = $client->phone;
-            // } else {
-            //     $msisdn = '0' . $client->phone;
-            // }
-            // $messageBody = 'Dear, ' . $client->name . ' Successfully Collection with payment no ' . $collection->payment_no . ' collection amount is ' . $collection->amount . ' collection type ' . $request->collection_type . ($request->collection_type != 'advance' ? ' and sales invoices are ' . $filtered_invoices : '');
-            // $csmsId = mt_rand(5, 15);
-            // $this->singleSms($msisdn, $messageBody, $csmsId);
         });
 
         return redirect()->route('admin.collection.index')->withSuccessMessage('Created Successfully!');
@@ -392,7 +320,7 @@ class CollectionController extends Controller
             if ($data->payment_type == 'Cash') {
                 $query->where('head_name', 'Cash In Hand');
             } elseif ($data->payment_type == 'Bank') {
-                $query->where('head_name', 'Cash In Bank');
+                $query->where('head_name', 'Cash at Bank');
             }
         })->get();
 
@@ -410,132 +338,93 @@ class CollectionController extends Controller
         // Balance Calculation
 
         $selected_head = AccountTransactionAuto::where('voucher_type', 'Collection')->where('voucher_no', $data->payment_no)->where('debit_amount', '>', 0)->first();
-        return view('admin.collection.edit', compact('title', 'data', 'rows', 'link', 'clients', 'staffs', 'cash_heads', 'selected_head', 'balance'));
+
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $data->company_id)
+                ->orderBy('name', 'asc')
+                ->get(['id', 'name']);
+        return view('admin.collection.edit', compact('title', 'data', 'rows', 'link', 'clients', 'staffs', 'cash_heads', 'selected_head', 'balance','companies','projects'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
-    {
-        $request->validate([
-            'client_id' => 'required',
-            'payment_no' => 'required',
-            'payment_date' => 'required',
-            'collection_type' => 'required',
-            'payment_type' => 'required',
+    public function update(Request $request, $id)
+{
+    $request->validate([
+        'client_id' => 'required',
+        'payment_no' => 'required',
+        'payment_date' => 'required',
+        'collection_type' => 'required',
+        'payment_type' => 'required',
+    ]);
+
+    if ($request->total_collection <= 0) {
+        return redirect()->back()->withErrors('Collection amount must be greater than 0!');
+    }
+
+    DB::transaction(function () use ($request, $id) {
+
+        $collection = Collection::findOrFail($id);
+
+        $collection->update([
+            'company_id' => $request->company_id,
+            'branch_id' => $request->project_id,
+            'client_id' => $request->client_id,
+            'coa_setup_id' => $request->coa_setup_id,
+            'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
+            'collection_type' => 'Collection',
+            'payment_type' => $request->payment_type,
+            'amount' => $request->total_collection,
+            'remarks' => $request->remarks,
+            'staff_id' => $request->staff_id,
         ]);
 
-        if ($request->total_collection <= 0) {
-            return redirect()->back()->withErrors('Collection amount must be greater than 0!');
-        }
+        $paymentNo = $collection->payment_no;
 
-        if ($request->collection_type == 'collection' || $request->collection_type == 'adjust') {
-            $request->validate([
-                'sales_id' => 'required',
-            ]);
-        }
+        // Account Transaction Update
+        if ($request->coa_setup_id) {
 
-        DB::transaction(function () use ($request, $id) {
-            $collection = Collection::findOrFail($id);
-            AccountTransactionAuto::withTrashed()->where('voucher_no', $collection->payment_no)->where('voucher_type', 'Collection')->forceDelete();
-            $amount = 0;
-            if ($request->collection_type != 'advance') {
-                foreach ($request->collection as $coll_amount) {
-                    $amount += $coll_amount;
-                }
+            $coa = CoaSetup::findOrFail($request->coa_setup_id);
+
+            $postData = [
+                'company_id' => $request->company_id,
+                'branch_id' => $request->project_id,
+                'voucher_no' => $paymentNo,
+                'voucher_type' => 'Collection',
+                'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
+                'coa_setup_id' => $request->coa_setup_id,
+                'coa_head_code' => $coa->head_name,
+                'narration' => 'Collection Against PAYMENT NO - ' . $paymentNo . ', ' . $request->remarks,
+                'debit_amount' => 0,
+                'credit_amount' => $request->total_collection,
+                'created_by' => Auth::user()->id,
+                'updated_at' => Carbon::now(),
+            ];
+
+            $transaction = AccountTransactionAuto::where('voucher_no', $paymentNo)
+                ->where('voucher_type', 'Collection')
+                ->first();
+
+            if ($transaction) {
+                $transaction->update($postData);
             } else {
-                $amount = $request->total_collection;
-            }
-            if ($amount == 0) {
-                return redirect()->back()->withErrors('Collection amount must be greater than ');
-            }
-            foreach ($collection->collection_data as $item) {
-                $sales = Sales::findOrFail($item->sales_id);
-                $collection_amount = $sales->total_paid - $item->amount;
-                $sales->update(['total_paid' => $collection_amount]);
-            }
-            CollectionData::where('collection_id', $id)->delete();
-
-            $collection->update([
-                'company_id' => Auth::user()->company_id ? Auth::user()->company_id : 1,
-                'client_id' => $request->client_id,
-                'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
-                'collection_type' => $request->collection_type,
-                'payment_type' => $request->payment_type,
-                'amount' => $amount,
-                'remarks' => $request->remarks,
-            ]);
-
-            $invoices = [];
-            if ($request->collection_type == 'collection' || $request->collection_type == 'adjust') {
-                foreach ($request->sales_id as $sales_id) {
-                    $sales = Sales::findOrFail($sales_id);
-                    $collection_amount = $sales->total_paid + $request->collection[$sales_id];
-                    $sales->update(['total_paid' => $collection_amount]);
-                    $invoices[] = $sales->invoice;
-
-                    CollectionData::create([
-                        'collection_id' => $collection->id,
-                        'sales_id' => $sales_id,
-                        'amount' => $request->collection[$sales_id],
-                    ]);
-                }
+                $postData['created_at'] = Carbon::now();
+                AccountTransactionAuto::create($postData);
             }
 
-            $client = Client::find($request->client_id);
-            if ($client->coa) {
-                $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                $headCode = collect([
-                    '0' => $cash_head->head_code,
-                    '1' => $client->coa->head_code
-                ]);
+        } else {
 
-                $debit_amount = collect([
-                    '0' => $amount,
-                    '1' => 0.00
-                ]);
+            // COA remove করলে related transaction delete
+            AccountTransactionAuto::where('voucher_no', $paymentNo)
+                ->where('voucher_type', 'Collection')
+                ->delete();
+        }
+    });
 
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $amount,
-                ]);
-
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'voucher_no' => $collection->payment_no,
-                        'voucher_type' => "Collection",
-                        'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Collection Against PAYMENT NO - ' . $collection->payment_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
-                        'created_by' => Auth::user()->id,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ];
-                }
-                AccountTransactionAuto::insert($postData);
-            }
-
-            $unique_invoices = array_unique($invoices);
-            $filtered_invoices = implode(',', $unique_invoices);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Collection',
-                'action' => 'Update',
-                'description' => 'Update Collection against payment no ' . $collection->payment_no . ' from client ' . $client->name . ' collection amount is ' . $collection->amount . ' collection type ' . $request->collection_type . ($request->collection_type != 'advance' ? ' and sales invoices are ' . $filtered_invoices : ''),
-                'user_id' => Auth::user()->id,
-            ]);
-        });
-
-        return redirect()->route('admin.collection.index')->withSuccessMessage('Updated Successfully!');
-    }
+    return redirect()->route('admin.collection.index')
+        ->withSuccessMessage('Updated Successfully!');
+}
 
     /**
      * Remove the specified resource from storage.

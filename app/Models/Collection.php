@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\CompanyScope;
+// use App\Models\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,16 +10,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Collection extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['company_id', 'client_id', 'staff_id', 'payment_no', 'payment_date', 'collection_type', 'payment_type', 'amount', 'remarks', 'sales_id', 'on_return', 'approved', 'approved_by', 'created_by', 'updated_by', 'deleted_by'];
+    protected $fillable = ['company_id', 'branch_id', 'coa_setup_id', 'client_id', 'staff_id', 'payment_no', 'payment_date', 'collection_type', 'payment_type', 'amount', 'remarks', 'sales_id', 'on_return', 'approved', 'approved_by', 'created_by', 'updated_by', 'deleted_by'];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id')->withTrashed();
+    }
+    public function project()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     public function client()

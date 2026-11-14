@@ -53,6 +53,15 @@
     </style>
 @endpush
 @section('content')
+    @php
+        $hasDiscount = $data->discount > 0;
+        $hasTax = $tax_amount > 0;
+        // Total row + Net row always; discount & tax rows optional
+        $footRowspan = 2 + ($hasDiscount ? 1 : 0) + ($hasTax ? 1 : 0);
+        $labelColspan = $data->product_type == 'Consumer' ? 2 : 3;
+        $payable = $opening + $net_amount;
+    @endphp
+
     <div class="content-wrapper">
         <table class="table mb-0 header-table" style="border: 2px solid black;">
             <tr>
@@ -82,12 +91,13 @@
                 </td>
             </tr>
         </table>
+
         <table class="table info-table align-middle" style="border: 2px solid black; margin-top: -2px; margin-bottom: 5px;">
             <thead>
                 <tr>
                     <th class="text-center" width="40px">SL#</th>
                     <th>Product Name</th>
-                    @if($data->product_type != 'Consumer')
+                    @if ($data->product_type != 'Consumer')
                         <th>Variant</th>
                     @endif
                     <th width="70">Quantity</th>
@@ -99,7 +109,7 @@
                 @foreach ($data->list as $item)
                     <tr>
                         <td class="text-center" width="40px">{{ $loop->iteration }}</td>
-                        @if($data->product_type == 'Consumer')
+                        @if ($data->product_type == 'Consumer')
                             <td>{{ @$item->product->name }}</td>
                         @else
                             <td>{{ @$item->variant->product->name }}</td>
@@ -107,32 +117,43 @@
                         @endif
                         <td width="50">{{ @$item->qty }}</td>
                         <td width="50">{{ number_format($item->rate, 2, '.', ',') }}</td>
-                        <td class="text-right" width="70">{{ number_format($item->rate * $item->qty, 2, '.', ',') }}
-                        </td>
+                        <td class="text-right" width="70">{{ number_format($item->rate * $item->qty, 2, '.', ',') }}</td>
                     </tr>
                 @endforeach
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="{{ $data->product_type == 'Consumer' ? '2' : '3' }}" rowspan="3"><b>In words :</b>
-                        {{ \App\HelperClass::convertNumber($data->total_amount - $data->discount) }} Taka
-                        Only</td>
+                    <td colspan="{{ $labelColspan }}" rowspan="{{ $footRowspan }}">
+                        <b>In words :</b>
+                        {{ \App\HelperClass::convertNumber($net_amount) }} Taka Only
+                    </td>
                     <td class="text-right" colspan="2"><b>Total Amount :</b></td>
                     <td class="text-right" width="70">{{ number_format($data->total_amount, 2, '.', ',') }}</td>
                 </tr>
-                @if ($data->discount > 0)
+
+                @if ($hasDiscount)
                     <tr>
                         <td class="text-right" colspan="2"><b>Discount Amount :</b></td>
                         <td class="text-right" width="70">{{ number_format($data->discount, 2, '.', ',') }}</td>
                     </tr>
                 @endif
+
+                @if ($hasTax)
+                    <tr>
+                        <td class="text-right" colspan="2">
+                            <b>Tax ({{ rtrim(rtrim(number_format($tax_percent, 2, '.', ''), '0'), '.') }}%) :</b>
+                        </td>
+                        <td class="text-right" width="70">{{ number_format($tax_amount, 2, '.', ',') }}</td>
+                    </tr>
+                @endif
+
                 <tr>
                     <td class="text-right" colspan="2"><b>Net Invoice Amount :</b></td>
-                    <td class="text-right" width="70">
-                        {{ number_format($data->total_amount - $data->discount, 2, '.', ',') }}</td>
+                    <td class="text-right" width="70">{{ number_format($net_amount, 2, '.', ',') }}</td>
                 </tr>
             </tfoot>
         </table>
+
         <table class="table mb-0 info-table align-middle" style="border: 2px solid black;">
             <tbody>
                 <tr>
@@ -141,9 +162,6 @@
                 </tr>
                 <tr>
                     <td class="text-right" colspan="5"><b>Net Payable :</b></td>
-                    @php
-                        $payable = $opening + $data->total_amount - $data->discount;
-                    @endphp
                     <td class="text-right" width="70">{{ number_format($payable, 2, '.', ',') }}</td>
                 </tr>
             </tbody>

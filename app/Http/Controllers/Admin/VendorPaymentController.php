@@ -100,7 +100,7 @@ class VendorPaymentController extends Controller
             }
             if ($request->type == 'Bank') {
                 $cash_heads = CoaSetup::with('parent')->whereHas('parent', function ($query) {
-                    $query->where('head_name', 'Cash In Bank');
+                    $query->where('head_name', 'Cash at Bank');
                 })->get();
             }
             return response()->json(['status' => 'success', 'cash_heads' => $cash_heads]);
@@ -151,12 +151,6 @@ class VendorPaymentController extends Controller
             return redirect()->back()->withErrors('Payment amount must be greater than 0!');
         }
 
-        if ($request->type == 'payment' || $request->type == 'adjust') {
-            $request->validate([
-                'lifting_id' => 'required',
-            ]);
-        }
-
         DB::transaction(function () use ($request) {
             $payment_no = $this->paymentNo();
             $vendor_payment = VendorPayment::create([
@@ -165,81 +159,52 @@ class VendorPaymentController extends Controller
                 'vendor_id' => $request->vendor_id,
                 'payment_no' => $payment_no,
                 'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
-                'payment_type' => $request->payment_type,
+                'payment_type' => 'Purchase',
                 'type' => $request->type,
                 'amount' => $request->total_paid,
                 'remarks' => $request->remarks,
                 'created_by' => Auth::user()->id,
             ]);
 
-            $invoices = [];
-            if ($request->type == 'payment' || $request->type == 'adjust') {
-                foreach ($request->lifting_id as $lifting_id) {
-                    $lifting = Lifting::findOrFail($lifting_id);
-
-                    $invoices[] = @$lifting->lifting_no;
-                    $paid = $lifting->total_paid + $request->curr_payment[$lifting_id];
-                    $lifting->update([
-                        'total_paid' => $paid,
-                    ]);
-
-                    VendorPaymentData::create([
-                        'vendor_payment_id' => $vendor_payment->id,
-                        'lifting_id' => $lifting_id,
-                        'paid' => $request->curr_payment[$lifting_id],
-                    ]);
-                }
-            }
-
+          
             $vendor = Vendor::findOrFail($request->vendor_id);
-            $adminSettings = AdminSetting::first();
-            if ($adminSettings->accounting == 1 && $vendor->coa && $request->type != 'adjust') {
-                $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                $headCode = collect([
-                    '0' => $vendor->coa->head_code,
-                    '1' => $cash_head->head_code,
-                ]);
+            if ($request->coa_setup_id) {
+                $expData[] = [
+                            'company_id' => $request->company_id,
+                            'branch_id' => $request->project_id,
+                            'expense_head_id' => $request->coa_setup_id,
+                            'expense_month' => Carbon::now()->month,
+                            'expense_year' => Carbon::now()->year,
+                            'expense_amount' => $request->total_paid,
+                            'expense_date' => date('Y-m-d', strtotime($request->payment_date)),
+                            'remarks' => 'Payment for Purchase Against PAYMENT NO - ' . $vendor_payment->payment_no . ", " . $request->remarks,
+                            'status' => 'Approved',
+                            'created_by' => Auth::user()->id,
+                            'created_at' => Carbon::now(),
+                            'updated_at' => Carbon::now()
+                        ];
 
-                $debit_amount = collect([
-                    '0' => $request->total_paid,
-                    '1' => 0.00
-                ]);
+                DB::table('hrm_expense')->insert($expData);
 
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $request->total_paid,
-                ]);
-
-                $countHead = count($headCode);
                 $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', Auth::user()->company_id ?? 1)->where('head_code', $headCode[$i])->first();
+                    $coasetup = CoaSetup::find($request->coa_setup_id);
                     $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
+                        'company_id' => $request->company_id,
+                        'branch_id' => $request->project_id,
                         'voucher_no' => $vendor_payment->payment_no,
-                        'voucher_type' => "Vendor Payment",
+                        'voucher_type' => "Purchase",
                         'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Payment Vendor Against PAYMENT NO - ' . $vendor_payment->payment_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
+                        'coa_setup_id' => $request->coa_setup_id,
+                        'coa_head_code' => $coasetup->heade_name,
+                        'narration' => 'Payment for Purchase Against PAYMENT NO - ' . $vendor_payment->payment_no.", ". $request->remarks,
+                        'debit_amount' => $request->total_paid,
+                        'credit_amount' => 0,
                         'created_by' => Auth::user()->id,
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now()
                     ];
-                }
                 AccountTransactionAuto::insert($postData);
             }
-
-            $filtered_invoices = implode(',', $invoices);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Vendor Payment',
-                'action' => 'Add',
-                'description' => 'Create a new Payment with payment no ' . $vendor_payment->payment_no . ' to ' . $vendor->name . ' amount is ' . $vendor_payment->amount . ' payment type ' . $request->type . ($request->collection_type != 'advance' ? ' and purchase no ' . $filtered_invoices : ''),
-                'user_id' => Auth::user()->id,
-            ]);
         });
 
         return redirect()->route('admin.vendor-payment.index')->withSuccessMessage('Created Successfully!');
@@ -319,7 +284,7 @@ class VendorPaymentController extends Controller
             if ($payment_type == 'Cash') {
                 $query->where('head_name', 'Cash In Hand');
             } elseif ($payment_type == 'Bank') {
-                $query->where('head_name', 'Cash In Bank');
+                $query->where('head_name', 'Cash at Bank');
             }
         })->get();
         $selected_head = AccountTransactionAuto::where('voucher_type', 'Vendor Payment')->where('voucher_no', $data->payment_no)->where('credit_amount', '>', 0)->first();
@@ -348,11 +313,10 @@ class VendorPaymentController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
         $request->validate([
             'vendor_id' => 'required',
-            'payment_no' => 'required',
             'payment_date' => 'required',
             'type' => 'required',
             'payment_type' => 'required',
@@ -362,104 +326,97 @@ class VendorPaymentController extends Controller
             return redirect()->back()->withErrors('Payment amount must be greater than 0!');
         }
 
-        if ($request->type == 'payment' || $request->type == 'adjust') {
-            $request->validate([
-                'lifting_id' => 'required',
-            ]);
-        }
-
         DB::transaction(function () use ($request, $id) {
-            $vendor_payment = VendorPayment::findOrFail($id);
-            AccountTransactionAuto::withTrashed()->where('voucher_no', $vendor_payment->payment_no)->where('voucher_type', 'Vendor Payment')->forceDelete();
 
-            foreach ($vendor_payment->payment_data as $item) {
-                $lifting = Lifting::findOrFail($item->lifting_id);
-                $total_paid = $lifting->total_paid - $item->paid;
-                $lifting->update(['total_paid' => $total_paid]);
-            }
-            VendorPaymentData::where('vendor_payment_id', $id)->delete();
+            $vendor_payment = VendorPayment::findOrFail($id);
 
             $vendor_payment->update([
                 'company_id' => $request->company_id,
                 'branch_id' => $request->project_id,
                 'vendor_id' => $request->vendor_id,
                 'payment_date' => date('Y-m-d', strtotime($request->payment_date)),
-                'payment_type' => $request->payment_type,
+                'payment_type' => 'Purchase',
                 'type' => $request->type,
                 'amount' => $request->total_paid,
                 'remarks' => $request->remarks,
             ]);
 
-            $invoices = [];
-            if ($request->type == 'payment' || $request->type == 'adjust') {
-                foreach ($request->lifting_id as $lifting_id) {
-                    $lifting = Lifting::findOrFail($lifting_id);
-                    $invoices[] = @$lifting->lifting_no;
-                    $paid = $lifting->total_paid + $request->curr_payment[$lifting_id];
-                    $lifting->update([
-                        'total_paid' => $paid,
-                    ]);
+            $paymentNo = $vendor_payment->payment_no;
 
-                    VendorPaymentData::create([
-                        'vendor_payment_id' => $vendor_payment->id,
-                        'lifting_id' => $lifting_id,
-                        'paid' => $request->curr_payment[$lifting_id],
-                    ]);
+            // Expense Update
+            $expense = DB::table('hrm_expense')
+                ->where('remarks', 'LIKE', '%PAYMENT NO - ' . $paymentNo . '%')
+                ->first();
+
+            if ($request->coa_setup_id) {
+
+                $expData = [
+                    'company_id' => $request->company_id,
+                    'branch_id' => $request->project_id,
+                    'expense_head_id' => $request->coa_setup_id,
+                    'expense_month' => Carbon::now()->month,
+                    'expense_year' => Carbon::now()->year,
+                    'expense_amount' => $request->total_paid,
+                    'expense_date' => date('Y-m-d', strtotime($request->payment_date)),
+                    'remarks' => 'Payment for Purchase Against PAYMENT NO - ' . $paymentNo . ", " . $request->remarks,
+                    'status' => 'Approved',
+                    'created_by' => Auth::user()->id,
+                    'updated_at' => Carbon::now(),
+                ];
+
+                if ($expense) {
+                    DB::table('hrm_expense')
+                        ->where('id', $expense->id)
+                        ->update($expData);
+                } else {
+                    $expData['created_at'] = Carbon::now();
+                    DB::table('hrm_expense')->insert($expData);
                 }
-            }
 
-            $vendor = Vendor::findOrFail($request->vendor_id);
-            $adminSettings = AdminSetting::first();
-            if ($adminSettings->accounting == 1 && $vendor->coa && $request->type != 'adjust') {
-                $cash_head = CoaSetup::findOrFail($request->coa_setup_id);
-                $headCode = collect([
-                    '0' => $vendor->coa->head_code,
-                    '1' => $cash_head->head_code,
-                ]);
+                // Account Transaction Update
+                $coasetup = CoaSetup::findOrFail($request->coa_setup_id);
 
-                $debit_amount = collect([
-                    '0' => $request->total_paid,
-                    '1' => 0.00
-                ]);
+                $postData = [
+                    'company_id' => $request->company_id,
+                    'branch_id' => $request->project_id,
+                    'voucher_no' => $paymentNo,
+                    'voucher_type' => 'Purchase',
+                    'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
+                    'coa_setup_id' => $request->coa_setup_id,
+                    'coa_head_code' => $coasetup->heade_name,
+                    'narration' => 'Payment for Purchase Against PAYMENT NO - ' . $paymentNo . ", " . $request->remarks,
+                    'debit_amount' => $request->total_paid,
+                    'credit_amount' => 0,
+                    'created_by' => Auth::user()->id,
+                    'updated_at' => Carbon::now(),
+                ];
 
-                $credit_amount = collect([
-                    '0' => 0.00,
-                    '1' => $request->total_paid,
-                ]);
+                $transaction = AccountTransactionAuto::where('voucher_no', $paymentNo)
+                    ->where('voucher_type', 'Purchase')
+                    ->first();
 
-                $countHead = count($headCode);
-                $postData = [];
-                for ($i = 0; $i < $countHead; $i++) {
-                    $coa = CoaSetup::where('company_id', (Auth::user()->company_id ?? 1))->where('head_code', $headCode[$i])->first();
-                    $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
-                        'voucher_no' => $vendor_payment->payment_no,
-                        'voucher_type' => "Vendor Payment",
-                        'voucher_date' => date('Y-m-d', strtotime($request->payment_date)),
-                        'coa_setup_id' => $coa->id,
-                        'coa_head_code' => $headCode[$i],
-                        'narration' => 'Payment Vendor Against PAYMENT NO - ' . $vendor_payment->payment_no,
-                        'debit_amount' => $debit_amount[$i],
-                        'credit_amount' => $credit_amount[$i],
-                        'created_by' => Auth::user()->id,
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ];
+                if ($transaction) {
+                    $transaction->update($postData);
+                } else {
+                    $postData['created_at'] = Carbon::now();
+                    AccountTransactionAuto::create($postData);
                 }
-                AccountTransactionAuto::insert($postData);
-            }
 
-            $filtered_invoices = implode(',', $invoices);
-            AccessLog::create([
-                'date_time' => Carbon::now(),
-                'page' => 'Vendor Payment',
-                'action' => 'Update',
-                'description' => 'Update Payment against payment no ' . $vendor_payment->payment_no . ' to ' . $vendor->name . ' amount is ' . $vendor_payment->amount . ' payment type ' . $request->type . ($request->collection_type != 'advance' ? ' and purchase no ' . $filtered_invoices : ''),
-                'user_id' => Auth::user()->id,
-            ]);
+            } else {
+
+                // COA remove করলে related expense ও transaction delete
+                DB::table('hrm_expense')
+                    ->where('remarks', 'LIKE', '%PAYMENT NO - ' . $paymentNo . '%')
+                    ->delete();
+
+                AccountTransactionAuto::where('voucher_no', $paymentNo)
+                    ->where('voucher_type', 'Purchase')
+                    ->delete();
+            }
         });
 
-        return redirect()->route('admin.vendor-payment.index')->withSuccessMessage('Updated Successfully!');
+        return redirect()->route('admin.vendor-payment.index')
+            ->withSuccessMessage('Updated Successfully!');
     }
 
     /**

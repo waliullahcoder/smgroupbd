@@ -2,6 +2,7 @@
 
 @section('content')
     <div class="row g-3">
+        <input type="hidden" name="type" id="type" value="advance">
         <div class="col-lg-6 col-sm-6">
             <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
             <select name="company_id" id="company_id" class="select form-select"
@@ -75,27 +76,18 @@
                 </select>
             </div>
         @endif
-        <div class="col-md-4 col-sm-6">
-            <label for="type" class="form-label"><b>Type <span class="text-danger">*</span></b></label>
-            <select name="type" id="type" class="select form-select" required>
-                <option value="payment" {{ $data->type == 'payment' ? 'selected' : '' }}>Invoice
-                </option>
-                <option value="advance" {{ $data->type == 'advance' ? 'selected' : '' }}>Advance</option>
-                <option value="adjust" {{ $data->type == 'adjust' ? 'selected' : '' }}>Adjust</option>
-                
-            </select>
-        </div>
+        
         <div class="col-md-4 col-sm-6">
             <label for="remarks" class="form-label"><b>Remarks</b></label>
             <input type="text" class="form-control" id="remarks" name="remarks" placeholder="Remarks"
                 value="{{ $data->remarks }}">
         </div>
-        <div class="col-md-2 col-6">
+        <div class="col-md-4 col-6">
             <label for="due" class="form-label"><b>Due</b></label>
             <input type="text" class="form-control" id="due" name="due" placeholder="Due" readonly
                 value="{{ $due }}">
         </div>
-        <div class="col-md-2 col-6">
+        <div class="col-md-4 col-6">
             <label for="advance" class="form-label"><b>Advance</b></label>
             <input type="text" class="form-control" id="advance" name="advance" placeholder="Advance" readonly
                 value="{{ $advance }}">
@@ -105,34 +97,7 @@
             <input type="text" class="form-control" id="total_paid" name="total_paid" value="{{ $data->amount }}"
                 placeholder="Total Payment">
         </div>
-        <div class="col-12">
-            <table class="table table-bordered table-striped align-middle mb-0">
-                <thead class="bg-primary text-white">
-                    <tr>
-                        <th width="30" class="text-center">SL#</th>
-                        <th>Lifting No</th>
-                        <th>Lifting Amount</th>
-                        <th>Previous Payment</th>
-                        <th>Due Amount</th>
-                        <th>Current Payment</th>
-                        <th width="60" class="text-center">
-                            <div class="custom-control custom-checkbox w-fit mx-auto ps-3">
-                                <input type="checkbox" class="custom-control-input" name="selectAll" id="checkAll">
-                                <label for="checkAll" class="custom-control-label"></label>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="tbody">
-                    @include('admin.vendor_payment.partial.table_rows', [
-                        'purchases' => $purchases,
-                        'data' => $data,
-                        'advance' => $advance,
-                        'type' => $data->type,
-                    ]);
-                </tbody>
-            </table>
-        </div>
+        
     </div>
 @endsection
 

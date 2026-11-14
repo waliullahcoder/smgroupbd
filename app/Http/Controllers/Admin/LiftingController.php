@@ -63,8 +63,7 @@ class LiftingController extends Controller
                         'id' => $row->id,
                         'edit' => !empty($type) && $type == 'trash' ? false : true,
                     ];
-                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 btn-info tt" href="' . Route('admin.lifting.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Print Voucher" target="_blank"><i class="fal fa-print"></i></a>
-                                    <a class="btn btn-sm border-0 px-10px fs-15 btn-info tt" href="' . Route('admin.lifting-barcode.print', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Print Barcode" target="_blank"><i class="far fa-barcode-read"></i></a>';
+                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 btn-info tt" href="' . Route('admin.lifting.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Print Voucher" target="_blank"><i class="fal fa-print"></i></a>';
 
                     $payemnt = VendorPaymentData::where('lifting_id', $row->id)->whereHas('payment')->first();
                     $transaction = AccountTransaction::withTrashed()->where('voucher_no', $row->lifting_no)->where('voucher_type', 'Product Purchase')->first();
