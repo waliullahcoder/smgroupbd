@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS `account_transactions` (
   `voucher_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `voucher_date` date NOT NULL,
   `coa_setup_id` bigint unsigned NOT NULL,
-  `coa_head_code` bigint NOT NULL,
+  `coa_head_code` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `narration` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `debit_amount` decimal(16,2) NOT NULL DEFAULT '0.00',
   `credit_amount` decimal(16,2) NOT NULL DEFAULT '0.00',
@@ -120,10 +120,14 @@ CREATE TABLE IF NOT EXISTS `account_transactions` (
   PRIMARY KEY (`id`),
   KEY `account_transactions_account_transaction_auto_id_foreign` (`account_transaction_auto_id`),
   CONSTRAINT `account_transactions_account_transaction_auto_id_foreign` FOREIGN KEY (`account_transaction_auto_id`) REFERENCES `account_transaction_autos` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table smgroupbd_live.account_transactions: ~0 rows (approximately)
+-- Dumping data for table smgroupbd_live.account_transactions: ~3 rows (approximately)
 DELETE FROM `account_transactions`;
+INSERT INTO `account_transactions` (`id`, `company_id`, `branch_id`, `account_transaction_auto_id`, `voucher_no`, `voucher_type`, `voucher_date`, `coa_setup_id`, `coa_head_code`, `narration`, `debit_amount`, `credit_amount`, `posted`, `approve`, `approve_by`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
+	(4, 4, 8, 11, 'JV-1000000001', 'JV', '2026-11-15', 303, '201126', 'A.K TRADING CORPORATION - 201126, Aashirbad - 201102', 15.00, 0.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 08:37:17', '2026-11-15 08:37:17'),
+	(5, 4, 8, 12, 'JV-1000000001', 'JV', '2026-11-15', 270, '201102', 'A.K TRADING CORPORATION - 201126, Aashirbad - 201102', 0.00, 15.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 08:37:17', '2026-11-15 08:37:17'),
+	(6, 4, 8, 13, 'EXP2611000001', 'Expense', '2026-11-15', 118, 'Administrative Expenses', 'Expense Against PAYMENT NO - EXP2611000001', 0.00, 40.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 09:16:57', '2026-11-15 09:16:57');
 
 -- Dumping structure for table smgroupbd_live.account_transaction_autos
 DROP TABLE IF EXISTS `account_transaction_autos`;
@@ -149,13 +153,17 @@ CREATE TABLE IF NOT EXISTS `account_transaction_autos` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table smgroupbd_live.account_transaction_autos: ~2 rows (approximately)
+-- Dumping data for table smgroupbd_live.account_transaction_autos: ~3 rows (approximately)
 DELETE FROM `account_transaction_autos`;
 INSERT INTO `account_transaction_autos` (`id`, `company_id`, `branch_id`, `voucher_no`, `voucher_type`, `voucher_date`, `coa_setup_id`, `coa_head_code`, `narration`, `debit_amount`, `credit_amount`, `posted`, `approve`, `approve_by`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
-	(1, 3, 7, 'STP2611000001', 'Purchase', '2026-11-14', 26, NULL, 'Payment for Purchase Against PAYMENT NO - STP2611000001, This is testing purchasehhhh', 160.00, 0.00, 0, 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 09:42:23', '2026-11-14 09:48:40'),
-	(7, 4, 8, 'STC2611000001', 'Collection', '2026-11-14', 26, 'Cash at Hand', 'Collection Against PAYMENT NO - STC2611000001, ', 0.00, 900.00, 0, 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 11:25:02', '2026-11-14 11:46:30');
+	(1, 4, 8, 'STP2611000001', 'Purchase', '2026-11-14', 19, NULL, 'Payment for Purchase Against PAYMENT NO - STP2611000001, This is testing purchasehhhh', 120.00, 0.00, 0, 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 09:42:23', '2026-11-15 08:41:46'),
+	(7, 4, 8, 'STC2611000001', 'Collection', '2026-11-14', 26, 'Cash at Hand', 'Collection Against PAYMENT NO - STC2611000001, ', 0.00, 900.00, 0, 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 11:25:02', '2026-11-14 11:46:30'),
+	(8, 1, 1, 'STC2611000002', 'Collection', '2026-11-15', 26, 'Cash at Hand', 'Collection Against PAYMENT NO - STC2611000002, This is testing sales', 0.00, 60.00, 0, 0, NULL, 1, NULL, NULL, NULL, '2026-11-15 06:37:06', '2026-11-15 06:47:20'),
+	(11, 4, 8, 'JV-1000000001', 'JV', '2026-11-15', 303, '201126', 'A.K TRADING CORPORATION - 201126, Aashirbad - 201102', 15.00, 0.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 08:36:05', '2026-11-15 08:37:17'),
+	(12, 4, 8, 'JV-1000000001', 'JV', '2026-11-15', 270, '201102', 'A.K TRADING CORPORATION - 201126, Aashirbad - 201102', 0.00, 15.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 08:36:05', '2026-11-15 08:37:17'),
+	(13, 4, 8, 'EXP2611000001', 'Expense', '2026-11-15', 118, 'Administrative Expenses', 'Expense Against PAYMENT NO - EXP2611000001', 0.00, 40.00, 1, 1, 1, 1, NULL, NULL, NULL, '2026-11-15 09:16:16', '2026-11-15 09:16:57');
 
 -- Dumping structure for table smgroupbd_live.admin_menus
 DROP TABLE IF EXISTS `admin_menus`;
@@ -244,11 +252,9 @@ INSERT INTO `admin_menus` (`id`, `permission_id`, `parent_id`, `name`, `name_bn`
 	(91, 308, 63, 'Delivery Charge', 'ডেলিভারি চার্জ', 'admin.delivery-charge.index', NULL, 5, 1, 1, '2023-11-19 17:09:47', '2023-11-19 17:09:47'),
 	(101, 332, 54, 'Online Sales History', 'অনলাইন বিক্রয়ের ইতিহাস', 'admin.online-sales-history.index', NULL, 13, 1, 1, '2023-11-27 11:16:13', '2024-09-05 06:38:55'),
 	(102, 333, 73, 'Page Setup', 'পেজ সেটআপ', 'admin.page.index', NULL, 12, 1, 1, '2023-11-27 14:58:52', '2023-11-27 14:58:52'),
-	(103, 334, NULL, 'General Accounting', 'সাধারণ হিসাবরক্ষণ', NULL, '<i class="fal fa-ballot-check"></i>', 8, 1, 1, '2023-12-13 12:04:08', '2026-07-16 04:05:55'),
+	(103, 334, NULL, 'Accounting', 'সাধারণ হিসাবরক্ষণ', NULL, '<i class="fal fa-ballot-check"></i>', 8, 1, 1, '2023-12-13 12:04:08', '2026-11-15 07:32:56'),
 	(104, 335, 103, 'Transaction', 'লেনদেন', NULL, NULL, 1, 1, 1, '2023-12-13 12:04:34', '2023-12-13 12:04:34'),
 	(105, 336, 104, 'Chart of Accounts', 'হিসাবের তালিকা', 'admin.coa-setup.index', NULL, 1, 1, 1, '2023-12-13 12:05:02', '2023-12-13 12:05:02'),
-	(106, 337, 104, 'Debit Voucher', 'ডেবিট ভাউচার', 'admin.debit-voucher-entry.index', NULL, 2, 1, 1, '2023-12-13 12:05:41', '2024-07-31 03:32:43'),
-	(107, 338, 104, 'Credit Voucher', 'ক্রেডিট ভাউচার', 'admin.credit-voucher-entry.index', NULL, 3, 1, 1, '2023-12-13 12:05:59', '2024-07-31 03:32:48'),
 	(108, 339, 104, 'Journal Voucher', 'জার্নাল ভাউচার', 'admin.journal-voucher-entry.index', NULL, 4, 1, 1, '2023-12-13 12:06:21', '2024-07-31 03:32:53'),
 	(109, 340, 104, 'Voucher Approve', 'ভাউচার অনুমোদন', 'admin.voucher-approve.index', NULL, 5, 1, 1, '2023-12-13 12:06:45', '2023-12-13 12:06:45'),
 	(110, 341, 104, 'Voucher Refuse', 'ভাউচার বাতিল', 'admin.voucher-reject.index', NULL, 6, 1, 1, '2023-12-13 12:07:04', '2023-12-13 12:07:04'),
@@ -505,16 +511,6 @@ INSERT INTO `admin_menu_actions` (`id`, `permission_id`, `admin_menu_id`, `name`
 	(233, 345, 105, 'edit', 'admin.coa-setup.edit', 1, '2023-12-13 12:12:10', '2023-12-13 12:12:10'),
 	(234, 346, 105, 'update', 'admin.coa-setup.update', 1, '2023-12-13 12:12:17', '2023-12-13 12:12:17'),
 	(235, 347, 105, 'delete', 'admin.coa-setup.destroy', 1, '2023-12-13 12:12:25', '2023-12-13 12:12:25'),
-	(236, 348, 106, 'create', 'admin.debit-voucher-entry.create', 1, '2023-12-13 12:13:07', '2023-12-13 12:13:07'),
-	(237, 349, 106, 'store', 'admin.debit-voucher-entry.store', 1, '2023-12-13 12:13:16', '2023-12-13 12:13:16'),
-	(238, 350, 106, 'edit', 'admin.debit-voucher-entry.edit', 1, '2023-12-13 12:13:24', '2023-12-13 12:13:24'),
-	(239, 351, 106, 'update', 'admin.debit-voucher-entry.update', 1, '2023-12-13 12:13:31', '2023-12-13 12:13:31'),
-	(240, 352, 106, 'delete', 'admin.debit-voucher-entry.destroy', 1, '2023-12-13 12:13:38', '2023-12-13 12:13:38'),
-	(241, 353, 107, 'create', 'admin.credit-voucher-entry.create', 1, '2023-12-13 12:13:58', '2023-12-13 12:13:58'),
-	(242, 354, 107, 'store', 'admin.credit-voucher-entry.store', 1, '2023-12-13 12:14:08', '2023-12-13 12:14:08'),
-	(243, 355, 107, 'edit', 'admin.credit-voucher-entry.edit', 1, '2023-12-13 12:14:14', '2023-12-13 12:14:14'),
-	(244, 356, 107, 'update', 'admin.credit-voucher-entry.update', 1, '2023-12-13 12:14:21', '2023-12-13 12:14:21'),
-	(245, 357, 107, 'delete', 'admin.credit-voucher-entry.destroy', 1, '2023-12-13 12:14:27', '2023-12-13 12:14:27'),
 	(246, 358, 108, 'create', 'admin.journal-voucher-entry.create', 1, '2023-12-13 12:14:55', '2023-12-13 12:14:55'),
 	(247, 359, 108, 'store', 'admin.journal-voucher-entry.store', 1, '2023-12-13 12:15:01', '2023-12-13 12:15:01'),
 	(248, 360, 108, 'edit', 'admin.journal-voucher-entry.edit', 1, '2023-12-13 12:15:06', '2023-12-13 12:15:06'),
@@ -1489,12 +1485,13 @@ CREATE TABLE IF NOT EXISTS `collections` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table smgroupbd_live.collections: ~1 rows (approximately)
+-- Dumping data for table smgroupbd_live.collections: ~2 rows (approximately)
 DELETE FROM `collections`;
 INSERT INTO `collections` (`id`, `company_id`, `branch_id`, `coa_setup_id`, `client_id`, `payment_no`, `payment_date`, `payment_type`, `collection_type`, `amount`, `remarks`, `sales_id`, `on_return`, `approved`, `approved_by`, `staff_id`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
-	(1, 4, 8, 26, 3033, 'STC2611000001', '2026-11-14', 'Cash', 'Collection', 900.00, NULL, NULL, 0, 0, NULL, 60, 1, NULL, NULL, NULL, '2026-11-14 11:23:38', '2026-11-14 11:46:30');
+	(1, 4, 8, 26, 3033, 'STC2611000001', '2026-11-14', 'Cash', 'Collection', 900.00, NULL, NULL, 0, 0, NULL, 60, 1, NULL, NULL, NULL, '2026-11-14 11:23:38', '2026-11-14 11:46:30'),
+	(2, 1, 1, 26, 3033, 'STC2611000002', '2026-11-15', 'Cash', 'Collection', 60.00, 'This is testing sales', NULL, 0, 0, NULL, 60, 1, NULL, NULL, NULL, '2026-11-15 06:37:06', '2026-11-15 06:47:20');
 
 -- Dumping structure for table smgroupbd_live.collection_data
 DROP TABLE IF EXISTS `collection_data`;
@@ -2490,6 +2487,7 @@ CREATE TABLE IF NOT EXISTS `hrm_expense` (
   `company_id` bigint unsigned NOT NULL DEFAULT '0',
   `branch_id` bigint unsigned NOT NULL DEFAULT '0',
   `expense_head_id` bigint unsigned NOT NULL,
+  `expense_no` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `expense_month` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `expense_year` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `expense_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
@@ -2505,12 +2503,13 @@ CREATE TABLE IF NOT EXISTS `hrm_expense` (
   KEY `expense_month` (`expense_month`),
   KEY `expense_year` (`expense_year`),
   KEY `status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table smgroupbd_live.hrm_expense: ~1 rows (approximately)
+-- Dumping data for table smgroupbd_live.hrm_expense: ~2 rows (approximately)
 DELETE FROM `hrm_expense`;
-INSERT INTO `hrm_expense` (`id`, `company_id`, `branch_id`, `expense_head_id`, `expense_month`, `expense_year`, `expense_amount`, `expense_date`, `remarks`, `status`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
-	(8, 3, 7, 26, '11', '2026', 160.00, '2026-11-14', 'Payment for Purchase Against PAYMENT NO - STP2611000001, This is testing purchasehhhh', 'Approved', 1, NULL, '2026-11-14 09:42:23', '2026-11-14 09:48:40');
+INSERT INTO `hrm_expense` (`id`, `company_id`, `branch_id`, `expense_head_id`, `expense_no`, `expense_month`, `expense_year`, `expense_amount`, `expense_date`, `remarks`, `status`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+	(8, 4, 8, 19, '', '11', '2026', 120.00, '2026-11-14', 'Payment for Purchase Against PAYMENT NO - STP2611000001, This is testing purchasehhhh', 'Approved', 1, NULL, '2026-11-14 09:42:23', '2026-11-15 08:41:46'),
+	(11, 4, 8, 118, 'EXP2611000001', '1', '2026', 40.00, '2026-11-15', 'Expense snacks', 'Approved', 1, NULL, '2026-11-15 09:16:16', '2026-11-15 09:16:16');
 
 -- Dumping structure for table smgroupbd_live.investors
 DROP TABLE IF EXISTS `investors`;
@@ -4143,11 +4142,9 @@ INSERT INTO `permissions` (`id`, `name`, `guard_name`, `created_at`, `updated_at
 	(329, 'admin.user.password-update', 'web', '2023-11-26 05:58:21', '2023-11-26 05:58:21'),
 	(332, 'Online Sales History', 'web', '2023-11-27 11:16:13', '2023-11-27 11:16:13'),
 	(333, 'Page Setup', 'web', '2023-11-27 14:58:52', '2023-11-27 14:58:52'),
-	(334, 'General Accounting', 'web', '2023-12-13 12:04:08', '2023-12-13 12:04:08'),
+	(334, 'Accounting', 'web', '2023-12-13 12:04:08', '2026-11-15 07:32:56'),
 	(335, 'Transaction 4', 'web', '2023-12-13 12:04:34', '2023-12-13 12:04:34'),
 	(336, 'Chart of Accounts', 'web', '2023-12-13 12:05:02', '2023-12-13 12:05:02'),
-	(337, 'admin.debit-voucher-entry.index', 'web', '2023-12-13 12:05:40', '2024-07-31 03:32:43'),
-	(338, 'admin.credit-voucher-entry.index', 'web', '2023-12-13 12:05:59', '2024-07-31 03:32:48'),
 	(339, 'admin.journal-voucher-entry.index', 'web', '2023-12-13 12:06:21', '2024-07-31 03:32:53'),
 	(340, 'Voucher Approve', 'web', '2023-12-13 12:06:45', '2023-12-13 12:06:45'),
 	(341, 'Voucher Refuse', 'web', '2023-12-13 12:07:04', '2023-12-13 12:07:04'),
@@ -4155,16 +4152,6 @@ INSERT INTO `permissions` (`id`, `name`, `guard_name`, `created_at`, `updated_at
 	(345, 'admin.coa-setup.edit', 'web', '2023-12-13 12:12:10', '2023-12-13 12:12:10'),
 	(346, 'admin.coa-setup.update', 'web', '2023-12-13 12:12:17', '2023-12-13 12:12:17'),
 	(347, 'admin.coa-setup.destroy', 'web', '2023-12-13 12:12:25', '2023-12-13 12:12:25'),
-	(348, 'admin.debit-voucher-entry.create', 'web', '2023-12-13 12:13:07', '2023-12-13 12:13:07'),
-	(349, 'admin.debit-voucher-entry.store', 'web', '2023-12-13 12:13:16', '2023-12-13 12:13:16'),
-	(350, 'admin.debit-voucher-entry.edit', 'web', '2023-12-13 12:13:24', '2023-12-13 12:13:24'),
-	(351, 'admin.debit-voucher-entry.update', 'web', '2023-12-13 12:13:30', '2023-12-13 12:13:30'),
-	(352, 'admin.debit-voucher-entry.destroy', 'web', '2023-12-13 12:13:38', '2023-12-13 12:13:38'),
-	(353, 'admin.credit-voucher-entry.create', 'web', '2023-12-13 12:13:58', '2023-12-13 12:13:58'),
-	(354, 'admin.credit-voucher-entry.store', 'web', '2023-12-13 12:14:08', '2023-12-13 12:14:08'),
-	(355, 'admin.credit-voucher-entry.edit', 'web', '2023-12-13 12:14:14', '2023-12-13 12:14:14'),
-	(356, 'admin.credit-voucher-entry.update', 'web', '2023-12-13 12:14:21', '2023-12-13 12:14:21'),
-	(357, 'admin.credit-voucher-entry.destroy', 'web', '2023-12-13 12:14:27', '2023-12-13 12:14:27'),
 	(358, 'admin.journal-voucher-entry.create', 'web', '2023-12-13 12:14:55', '2023-12-13 12:14:55'),
 	(359, 'admin.journal-voucher-entry.store', 'web', '2023-12-13 12:15:01', '2023-12-13 12:15:01'),
 	(360, 'admin.journal-voucher-entry.edit', 'web', '2023-12-13 12:15:06', '2023-12-13 12:15:06'),
@@ -5166,8 +5153,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 1),
 	(335, 1),
 	(336, 1),
-	(337, 1),
-	(338, 1),
 	(339, 1),
 	(340, 1),
 	(341, 1),
@@ -5175,16 +5160,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(345, 1),
 	(346, 1),
 	(347, 1),
-	(348, 1),
-	(349, 1),
-	(350, 1),
-	(351, 1),
-	(352, 1),
-	(353, 1),
-	(354, 1),
-	(355, 1),
-	(356, 1),
-	(357, 1),
 	(358, 1),
 	(359, 1),
 	(360, 1),
@@ -5482,8 +5457,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 10),
 	(335, 10),
 	(336, 10),
-	(337, 10),
-	(338, 10),
 	(339, 10),
 	(340, 10),
 	(341, 10),
@@ -5491,16 +5464,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(345, 10),
 	(346, 10),
 	(347, 10),
-	(348, 10),
-	(349, 10),
-	(350, 10),
-	(351, 10),
-	(352, 10),
-	(353, 10),
-	(354, 10),
-	(355, 10),
-	(356, 10),
-	(357, 10),
 	(358, 10),
 	(359, 10),
 	(360, 10),
@@ -5831,8 +5794,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 15),
 	(335, 15),
 	(336, 15),
-	(337, 15),
-	(338, 15),
 	(339, 15),
 	(340, 15),
 	(341, 15),
@@ -5840,16 +5801,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(345, 15),
 	(346, 15),
 	(347, 15),
-	(348, 15),
-	(349, 15),
-	(350, 15),
-	(351, 15),
-	(352, 15),
-	(353, 15),
-	(354, 15),
-	(355, 15),
-	(356, 15),
-	(357, 15),
 	(358, 15),
 	(359, 15),
 	(360, 15),
@@ -6063,8 +6014,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 20),
 	(335, 20),
 	(336, 20),
-	(337, 20),
-	(338, 20),
 	(339, 20),
 	(340, 20),
 	(341, 20),
@@ -6072,16 +6021,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(345, 20),
 	(346, 20),
 	(347, 20),
-	(348, 20),
-	(349, 20),
-	(350, 20),
-	(351, 20),
-	(352, 20),
-	(353, 20),
-	(354, 20),
-	(355, 20),
-	(356, 20),
-	(357, 20),
 	(358, 20),
 	(359, 20),
 	(360, 20),
@@ -6358,23 +6297,11 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 25),
 	(335, 25),
 	(336, 25),
-	(337, 25),
-	(338, 25),
 	(339, 25),
 	(344, 25),
 	(345, 25),
 	(346, 25),
 	(347, 25),
-	(348, 25),
-	(349, 25),
-	(350, 25),
-	(351, 25),
-	(352, 25),
-	(353, 25),
-	(354, 25),
-	(355, 25),
-	(356, 25),
-	(357, 25),
 	(358, 25),
 	(359, 25),
 	(360, 25),
@@ -6606,8 +6533,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(334, 26),
 	(335, 26),
 	(336, 26),
-	(337, 26),
-	(338, 26),
 	(339, 26),
 	(340, 26),
 	(341, 26),
@@ -6615,16 +6540,6 @@ INSERT INTO `role_has_permissions` (`permission_id`, `role_id`) VALUES
 	(345, 26),
 	(346, 26),
 	(347, 26),
-	(348, 26),
-	(349, 26),
-	(350, 26),
-	(351, 26),
-	(352, 26),
-	(353, 26),
-	(354, 26),
-	(355, 26),
-	(356, 26),
-	(357, 26),
 	(358, 26),
 	(359, 26),
 	(360, 26),
@@ -7692,7 +7607,7 @@ CREATE TABLE IF NOT EXISTS `vendor_payments` (
 -- Dumping data for table smgroupbd_live.vendor_payments: ~1 rows (approximately)
 DELETE FROM `vendor_payments`;
 INSERT INTO `vendor_payments` (`id`, `company_id`, `branch_id`, `vendor_id`, `lifting_id`, `lifting_return_id`, `payment_no`, `payment_date`, `payment_type`, `type`, `amount`, `remarks`, `approved`, `approved_by`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
-	(9, 3, 7, 1, NULL, NULL, 'STP2611000001', '2026-11-14', 'Purchase', 'advance', 160.00, 'This is testing purchasehhhh', 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 09:42:23', '2026-11-14 09:48:40');
+	(9, 4, 8, 1, NULL, NULL, 'STP2611000001', '2026-11-14', 'Purchase', 'advance', 120.00, 'This is testing purchasehhhh', 0, NULL, 1, NULL, NULL, NULL, '2026-11-14 09:42:23', '2026-11-15 08:41:46');
 
 -- Dumping structure for table smgroupbd_live.vendor_payment_data
 DROP TABLE IF EXISTS `vendor_payment_data`;
@@ -7707,7 +7622,7 @@ CREATE TABLE IF NOT EXISTS `vendor_payment_data` (
   KEY `vendor_payment_data_vendor_payment_id_foreign` (`vendor_payment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table smgroupbd_live.vendor_payment_data: ~1 rows (approximately)
+-- Dumping data for table smgroupbd_live.vendor_payment_data: ~0 rows (approximately)
 DELETE FROM `vendor_payment_data`;
 
 -- Dumping structure for view smgroupbd_live.view_all_sales
@@ -8159,7 +8074,7 @@ CREATE TABLE `view_trial_balance` (
 	`voucher_no` VARCHAR(1) NOT NULL COLLATE 'utf8mb4_unicode_ci',
 	`voucher_date` DATE NOT NULL,
 	`coa_setup_id` BIGINT UNSIGNED NOT NULL,
-	`coa_head_code` BIGINT NOT NULL,
+	`coa_head_code` VARCHAR(1) NULL COLLATE 'utf8mb4_unicode_ci',
 	`debit_amount` DECIMAL(16,2) NOT NULL,
 	`credit_amount` DECIMAL(16,2) NOT NULL,
 	`transaction` TINYINT NULL,
