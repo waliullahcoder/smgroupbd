@@ -516,32 +516,49 @@ class SalesController extends Controller
 
     public function invoice(string $id)
     {
+        $company = null;
+
         if (Auth::user()->company_id) {
             $company = Company::find(Auth::user()->company_id);
-            $hotline = $company->fax;
-            $logo = $company->logo;
-            $title = $company->name;
-            $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
-        } else {
-            $logo = NULL;
-            $hotline = '01xxxxx-xxxxx';
-            $title = 'Company Name Goes Here.';
-            $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
         }
 
-        $data = Sales::findOrFail($id);
+        $logo = $company->logo ?? null;
+        $title = $company->name ?? 'Company Name Goes Here.';
+        $hotline = $company->fax ?? '01xxxxx-xxxxx';
 
-        // Current invoice calculation
-        $subtotal       = $data->total_amount - $data->discount;          // total - discount
-        $tax_percent    = (float) ($data->tax ?? 0);
-        $tax_amount     = (float) ($data->tax_amount ?? 0);
-        $net_amount     = $subtotal + $tax_amount;                        // net invoice amount
+        $informations = $company
+            ? $company->address . '<br>' .
+                $company->phone . ' | ' .
+                $company->email . ' | ' .
+                $company->website
+            : 'Company address will goes here';
 
-        // Previous sales (net = total - discount + tax)
-        $previous_sale_amount = Sales::whereNotIn('id', [$id])
-            ->where('client_id', $data->client_id)
-            ->sum(DB::raw('total_amount - discount + COALESCE(tax_amount, 0)'));
+        $data = Sales::with([
+            'client',
+            'staff',
+            'list.product',
+            'list.variant.product'
+        ])->findOrFail($id);
 
+        // Invoice Calculation
+        $total_amount = (float) $data->total_amount;
+        $discount = (float) ($data->discount ?? 0);
+
+        $subtotal = $total_amount - $discount;
+
+        $tax_percent = (float) ($data->tax ?? 0);
+        $tax_amount = (float) ($data->tax_amount ?? 0);
+
+        $net_amount = $subtotal + $tax_amount;
+
+        // Previous Sales
+        $previous_sale_amount = Sales::where('client_id', $data->client_id)
+            ->where('id', '!=', $id)
+            ->sum(DB::raw(
+                'total_amount - COALESCE(discount, 0) + COALESCE(tax_amount, 0)'
+            ));
+
+        // Previous Collections
         $total_paid_amount = Collection::where('client_id', $data->client_id)
             ->where('payment_no', '!=', $data->invoice)
             ->where('collection_type', '!=', 'adjust')
@@ -549,9 +566,12 @@ class SalesController extends Controller
 
         $opening = $previous_sale_amount - $total_paid_amount;
 
-        $report_title = 'Invoice';
+        $payable = $opening + $net_amount;
+
+        $report_title = 'Sales Invoice';
 
         return view('admin.sales.invoice', compact(
+            'company',
             'title',
             'logo',
             'informations',
@@ -562,27 +582,11 @@ class SalesController extends Controller
             'subtotal',
             'tax_percent',
             'tax_amount',
-            'net_amount'
+            'discount',
+            'total_amount',
+            'net_amount',
+            'payable'
         ));
-
-        // $pdf = Pdf::loadView('admin.sales.invoice', compact(
-        //     'title',
-        //     'logo',
-        //     'informations',
-        //     'hotline',
-        //     'report_title',
-        //     'data',
-        //     'opening',
-        //     'subtotal',
-        //     'tax_percent',
-        //     'tax_amount',
-        //     'net_amount'
-        // ));
-
-        
-
-        // // $pdf->setPaper('A4', 'landscape');
-        // return $pdf->stream('sales_invoice_' . date('d_m_Y_H_i_s') . '.pdf');
     }
 
     /**

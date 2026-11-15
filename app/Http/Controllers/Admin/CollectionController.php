@@ -252,19 +252,38 @@ class CollectionController extends Controller
      */
     public function show(string $id)
     {
+        $company = null;
+
         if (Auth::user()->company_id) {
             $company = Company::find(Auth::user()->company_id);
+
             $title = $company->name;
-            $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
+            $informations = $company->address . '<br>' .
+                $company->phone . ', ' .
+                $company->email . ', ' .
+                $company->website;
+
+            $logo = $company->logo ?? null;
         } else {
             $title = 'Company Name Goes Here.';
-            $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
+            $informations = 'Company address will goes here <br>
+                Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
+
+            $logo = null;
         }
-        $data = Collection::findOrFail($id);
+
+        $data = Collection::with(['client', 'staff'])->findOrFail($id);
+
         $report_title = 'Money Receipt';
-        // return view('admin.collection.print', compact('title', 'informations', 'report_title', 'data'));
-        $pdf = Pdf::loadView('admin.collection.print', compact('title', 'informations', 'report_title', 'data'));
-        return $pdf->stream('collection_chalan_' . date('d_m_Y_H_i_s') . '.pdf');
+
+        return view('admin.collection.print', compact(
+            'company',
+            'title',
+            'informations',
+            'logo',
+            'report_title',
+            'data'
+        ));
     }
 
     /**
