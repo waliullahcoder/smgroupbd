@@ -213,23 +213,48 @@ class VendorPaymentController extends Controller
     /**
      * Display the specified resource.
      */
+    
     public function show(string $id)
     {
         if (Auth::user()->company_id) {
+
             $company = Company::find(Auth::user()->company_id);
+
             $title = $company->name;
-            $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
+
+            $informations = $company->address .
+                '<br>' . $company->phone .
+                ', ' . $company->email .
+                ', ' . $company->website;
+
         } else {
+
+            $company = null;
+
             $title = 'Company Name Goes Here.';
-            $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
+
+            $informations = 'Company address will goes here
+                <br> Mobile: 0967XXXXXX,
+                Email: youremail@gmail.com,
+                www.website.com';
         }
-        $data = VendorPayment::findOrFail($id);
-        $report_title = 'Payment Voucher';
-        // return view('admin.vendor_payment.print', compact('title', 'informations', 'report_title', 'data'));
-        $pdf = Pdf::loadView('admin.vendor_payment.print', compact('title', 'informations', 'report_title', 'data'));
-        // $pdf->setPaper('A4', 'landscape');
-        return $pdf->stream('vendor_payment_invoice_' . date('d_m_Y_H_i_s') . '.pdf');
+
+        $data = VendorPayment::with([
+            'vendor',
+            'staff'
+        ])->findOrFail($id);
+
+        $report_title = 'Vendor Payment Receipt';
+
+        return view('admin.vendor_payment.print', compact(
+            'title',
+            'informations',
+            'report_title',
+            'data',
+            'company'
+        ));
     }
+
 
     /**
      * Show the form for editing the specified resource.

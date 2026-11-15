@@ -144,7 +144,7 @@
                                     <span class="text-end" style="width: 25px;">TK.</span>
                                 </div>
                                 <div class="input-group flex-nowrap align-items-center mb-1">
-                                    <b class="text-end me-2" style="width: 90px;">Tax (%)</b>
+                                    <b class="text-end me-2" style="width: 90px;">VAT & Tax (%)</b>
                                     <input type="number" id="tax" name="tax" class="form-control"
                                         placeholder="Tax %" style="min-width: 100px;" value="0" min="0"
                                         max="100" step="any">

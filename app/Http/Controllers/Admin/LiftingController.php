@@ -243,23 +243,47 @@ class LiftingController extends Controller
     /**
      * Display the specified resource.
      */
+   
     public function show(Request $request, string $id)
     {
         if (Auth::user()->company_id) {
+
             $company = Company::find(Auth::user()->company_id);
+
             $title = $company->name;
-            $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
+
+            $informations = $company->address .
+                '<br>' . $company->phone .
+                ', ' . $company->email .
+                ', ' . $company->website;
+
         } else {
+
             $title = 'Company Name Goes Here.';
-            $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
+
+            $informations = 'Company address will goes here
+                <br> Mobile: 0967XXXXXX,
+                Email: youremail@gmail.com,
+                www.website.com';
         }
-        $data = Lifting::findOrFail($id);
+
+        $data = Lifting::with([
+            'vendor',
+            'staff',
+            'products.product.category',
+            'products.product.attribute'
+        ])->findOrFail($id);
+
         $report_title = 'Lifting Voucher';
-        // return view('admin.lifting.print', compact('title', 'informations', 'report_title', 'data'));
-        $pdf = Pdf::loadView('admin.lifting.print', compact('title', 'informations', 'report_title', 'data'));
-        // $pdf->setPaper('A4', 'landscape');
-        return $pdf->stream('product_lifting_chalan_' . date('d_m_Y_H_i_s') . '.pdf');
+
+        return view('admin.lifting.print', compact(
+            'title',
+            'informations',
+            'report_title',
+            'data'
+        ));
     }
+
 
     /**
      * Show the form for editing the specified resource.
