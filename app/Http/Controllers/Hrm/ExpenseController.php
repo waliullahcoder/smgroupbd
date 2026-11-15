@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Hrm;
 use App\Models\Client;
+use App\Models\Company;
+use App\Models\Branch;
 use App\Models\ClientCategory;
 use App\Models\CoaSetup;
+use App\Models\AccountTransactionAuto;
 use App\Models\coa_setups;
 use App\Models\User;
 use App\Models\Role;
@@ -107,42 +110,113 @@ class ExpenseController extends Controller
   public function create()
     {
         $coas = DB::table('coa_setups')
-            ->where('parent_id', 4)
+            ->where('head_type', 'E')
             ->orderBy('head_name')
             ->get();
-
-        return view('hrm.expense.create', compact('coas'));
+        $companies = Company::orderBy('name', 'asc')->get();
+        return view('hrm.expense.create', compact('coas','companies'));
     }
 
 
+   
     public function store(Request $request)
     {
         $request->validate([
-            'expense_head_id'    => 'required|exists:coa_setups,id',
-            'expense_month'  => 'required|integer|between:1,12',
-            'expense_year'   => 'required|digits:4',
-            'expense_amount'    => 'required|numeric|min:0',
-            'expense_date'      => 'required|date',
-            'status'         => 'required|in:Pending,Approved,Paid',
-            'remarks'        => 'nullable|string',
-        ]);
-        DB::table('hrm_expense')->insert([
-            'expense_head_id'   => $request->expense_head_id,
-            'expense_month' => $request->expense_month,
-            'expense_year'  => $request->expense_year,
-            'expense_amount'        => $request->expense_amount,
-            'expense_date'  => $request->expense_date,
-            'remarks'       => $request->remarks,
-            'status'        => $request->status,
-            'created_by'    => auth()->id(),
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            'expense_head_id' => 'required|exists:coa_setups,id',
+            'expense_month'   => 'required|integer|between:1,12',
+            'expense_year'    => 'required|digits:4',
+            'expense_amount'  => 'required|numeric|min:0',
+            'expense_date'    => 'required|date',
+            'status'          => 'required|in:Pending,Approved,Paid',
+            'remarks'         => 'nullable|string',
         ]);
 
-        return redirect()
-            ->route('admin.expense.index')
-            ->withSuccessMessage('Expense added successfully.');
+        try {
+
+            DB::transaction(function () use ($request) {
+
+                // Generate Payment No
+                $payment_no = $this->paymentGenerateNo();
+
+                // Expense Head
+                $coa = CoaSetup::findOrFail($request->expense_head_id);
+
+                // Expense Insert
+                DB::table('hrm_expense')->insert([
+                    'company_id'      => $request->company_id,
+                    'branch_id'       => $request->project_id,
+                    'expense_no'      => $payment_no,
+                    'expense_head_id' => $request->expense_head_id,
+                    'expense_month'   => $request->expense_month,
+                    'expense_year'    => $request->expense_year,
+                    'expense_amount'  => $request->expense_amount,
+                    'expense_date'    => $request->expense_date,
+                    'remarks'         => $request->remarks,
+                    'status'          => $request->status,
+                    'created_by'      => auth()->id(),
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+
+                // Account Transaction Insert
+                $postData = [];
+
+                $postData[] = [
+                    'company_id'     => $request->company_id,
+                    'branch_id'      => $request->project_id,
+                    'voucher_no'     => $payment_no,
+                    'voucher_type'   => 'Expense',
+                    'voucher_date'   => date('Y-m-d', strtotime($request->expense_date)),
+                    'coa_setup_id'   => $request->expense_head_id,
+                    'coa_head_code'  => $coa->head_name,
+                    'narration'      => 'Expense Against PAYMENT NO - ' . $payment_no,
+                    'debit_amount'   => 0,
+                    'credit_amount'  => $request->expense_amount,
+                    'created_by'     => auth()->id(),
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ];
+
+                AccountTransactionAuto::insert($postData);
+
+            });
+
+            return redirect()
+                ->route('admin.expense.index')
+                ->withSuccessMessage('Expense added successfully.');
+
+        } catch (\Exception $e) {
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors('Expense could not be saved: ' . $e->getMessage());
+        }
     }
+
+
+    
+    public function paymentGenerateNo()
+    {
+        $prefix = "EXP" . date('ym');
+
+        $data = DB::table('hrm_expense')
+            ->where('expense_no', 'like', $prefix . '%')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($data) {
+            $trim = str_replace($prefix, '', $data->expense_no);
+            $dataPrefix = (int) $trim + 1;
+
+            $invoice = $prefix . str_pad($dataPrefix, 6, '0', STR_PAD_LEFT);
+        } else {
+            $invoice = $prefix . '000001';
+        }
+
+        return $invoice;
+    }
+
 
     public function edit($id)
     {
