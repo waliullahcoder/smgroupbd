@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountTransactionAuto;
 use App\Models\CoaSetup;
 use App\Models\Company;
+use App\Models\Branch;
 use App\Models\Scopes\CompanyScope;
 use App\Services\ActionButtons\ActionButtons;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,61 +24,129 @@ class JournalVoucherEntryController extends Controller
      */
     public function index()
     {
-        if (request()->ajax()) {
-            $model = AccountTransactionAuto::with(['company'])
-                ->where('voucher_type', 'JV')
-                ->orderBY('id', 'desc')
-                ->orderBY('voucher_date', 'desc')->groupBy('voucher_no');
-            $type = request('type');
-            if (!empty($type) && $type == 'trash') {
-                $model->onlyTrashed();
-            }
+        
+        if (request()->ajax()) {   
+        $model = AccountTransactionAuto::with(['company'])
+            ->where('voucher_type', 'JV')
+            ->when(request('type') == 'trash', function ($query) {
+                $query->onlyTrashed();
+            })
+            ->selectRaw('
+                MIN(id) as id,
+                voucher_no,
+                voucher_date,
+                company_id,
+                approve,
+                SUM(debit_amount) as total_debit,
+                SUM(credit_amount) as total_credit
+            ')
+            ->groupBy(
+                'voucher_no',
+                'voucher_date',
+                'company_id',
+                'approve'
+            )
+            ->orderByDesc('voucher_date')
+            ->orderByRaw('MIN(id) DESC');
+
             return DataTables::eloquent($model)
                 ->addIndexColumn()
+
                 ->addColumn('checkbox', function ($row) {
-                    $checkbox = '<div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input ' . (!empty(request('type')) && request('type') == "trash" ? 'trash_multi_checkbox' : 'multi_checkbox') . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                    return $checkbox;
+
+                    $class = request('type') == 'trash'
+                        ? 'trash_multi_checkbox'
+                        : 'multi_checkbox';
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox"
+                            class="custom-control-input '.$class.'"
+                            id="'.$row->id.'"
+                            name="multi_checkbox[]"
+                            value="'.$row->id.'">
+                        <label for="'.$row->id.'"
+                            class="custom-control-label"></label>
+                    </div>';
                 })
+
                 ->addColumn('voucher_date', function ($row) {
                     return date('d-m-Y', strtotime($row->voucher_date));
                 })
+
                 ->addColumn('debit_head', function ($row) {
-                    return AccountTransactionAuto::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransactionAuto::with('coa')
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', 'JV')
                         ->where('debit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->unique()
+                        ->implode(', ');
                 })
+
                 ->addColumn('credit_head', function ($row) {
-                    return AccountTransactionAuto::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransactionAuto::with('coa')
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', 'JV')
                         ->where('credit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->unique()
+                        ->implode(', ');
                 })
+
+                ->addColumn('total_debit', function ($row) {
+                    return number_format($row->total_debit, 2);
+                })
+
+                ->addColumn('total_credit', function ($row) {
+                    return number_format($row->total_credit, 2);
+                })
+
                 ->addColumn('approve', function ($row) {
                     return $row->approve == 1 ? 'Approved' : 'Pending';
                 })
+
                 ->addColumn('actions', function ($row) {
+
                     $type = request('type');
+
                     $data = [
                         'id' => $row->id,
-                        'edit' => !empty($type) && $type == 'trash' ? false : true,
+                        'edit' => $type == 'trash' ? false : true,
                     ];
 
-                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 text-white tt btn-print-1" href="' . Route('admin.journal-voucher-entry.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="View"><i class="fas fa-eye"></i></a>';
-                    $actionBtn .= '<a class="btn btn-sm border-0 px-10px fs-15 text-white tt btn-print-2" href="' . Route('admin.journal-voucher-entry.print', $row->id) . '" target="_blank" data-bs-toggle="tooltip" data-bs-placement="top" title="Print"><i class="fal fa-print"></i></a>';
+                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 text-white tt btn-print-1"
+                        href="'.Route('admin.journal-voucher-entry.show', $row->id).'"
+                        title="View">
+                        <i class="fas fa-eye"></i>
+                    </a>';
 
-                    if ($type == 'all' && $row->approve == 1 || is_null($type) && $row->approve == 1) {
-                        return '<div class="btn-group">' . $actionBtn . '</div>';
-                    } else {
-                        return ActionButtons::actions($data, $actionBtn);
+                    $actionBtn .= '<a class="btn btn-sm border-0 px-10px fs-15 text-white tt btn-print-2"
+                        href="'.Route('admin.journal-voucher-entry.print', $row->id).'"
+                        target="_blank" title="Print">
+                        <i class="fal fa-print"></i>
+                    </a>';
+
+                    if (($type == 'all' || is_null($type)) && $row->approve == 1) {
+                        return '<div class="btn-group">'.$actionBtn.'</div>';
                     }
+
+                    return ActionButtons::actions($data, $actionBtn);
                 })
+
                 ->rawColumns(['checkbox', 'actions'])
                 ->make(true);
         }
+
         $title = 'Journal Voucher Entry';
+
         return view('admin.journal_voucher_entry.index', compact('title'));
+
     }
 
 
@@ -102,7 +171,8 @@ class JournalVoucherEntryController extends Controller
         $title = 'Create Journal Voucher';
         $coas = CoaSetup::where('transaction', '1')->orderBy('head_name', 'asc')->get();
         $voucher_no = $this->voucherNo();
-        return view('admin.journal_voucher_entry.create', compact('title', 'coas', 'voucher_no'));
+        $companies = Company::orderBy('name', 'asc')->get();
+        return view('admin.journal_voucher_entry.create', compact('title', 'coas', 'voucher_no','companies'));
     }
 
     /**
@@ -124,7 +194,8 @@ class JournalVoucherEntryController extends Controller
                     }
                     $voucher_no = $this->voucherNo();
                     $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
+                        'company_id' => $request->company_id,
+                        'branch_id' => $request->project_id,
                         'voucher_no' => $voucher_no,
                         'voucher_type' => "JV",
                         'voucher_date' => date('Y-m-d', strtotime($request->voucher_date)),
@@ -195,7 +266,11 @@ class JournalVoucherEntryController extends Controller
         $title = "Update Journal Voucher";
         $link = Route('admin.journal-voucher-entry.update', $id);
         $coas = CoaSetup::whereNotIn('id', $journalEntries->pluck('coa_setup_id')->toArray())->where('transaction', '1')->orderBy('head_name', 'asc')->get();
-        return view('admin.journal_voucher_entry.edit', compact('title', 'link', 'journalEntry', 'journalEntries', 'coas'));
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $journalEntry->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+        return view('admin.journal_voucher_entry.edit', compact('title', 'link', 'journalEntry', 'journalEntries', 'coas','companies','projects'));
     }
 
     /**
@@ -222,7 +297,8 @@ class JournalVoucherEntryController extends Controller
                     }
                     $voucher_no = $this->voucherNo();
                     $postData[] = [
-                        'company_id' => Auth::user()->company_id ?? 1,
+                        'company_id' => $request->company_id,
+                        'branch_id' => $request->project_id,
                         'voucher_no' => $voucher_no,
                         'voucher_type' => "JV",
                         'voucher_date' => date('Y-m-d', strtotime($request->voucher_date)),

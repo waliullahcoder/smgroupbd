@@ -3,6 +3,33 @@
 @section('content')
     <div class="row g-3">
         <div class="col-lg-4 col-sm-6">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
+                <option value=""></option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}"
+                        {{ old('company_id', $journalEntry->company_id) == $company->id ? 'selected' : '' }}>
+                        {{ $company->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-lg-4 col-sm-6">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required>
+                <option value=""></option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}"
+                        {{ old('project_id', $journalEntry->branch_id) == $project->id ? 'selected' : '' }}>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-lg-4 col-sm-6">
             <label for="voucher_no" class="form-label"><b>Voucher No <span class="text-danger">*</span></b></label>
             <input type="text" class="form-control" name="voucher_no" id="voucher_no" value="{{ $journalEntry->voucher_no }}"
                 readonly required>
@@ -24,15 +51,16 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-lg-9 col-sm-8">
+        <div class="col-lg-4 col-sm-4">
+            <label class="form-label text-white"><b>add</b></label>
+            <button type="button" class="btn btn-xs btn-primary w-100 px-2 py-2" id="add_item">Add Account</button>
+        </div>
+        <div class="col-lg-12 col-sm-12">
             <label for="narration" class="form-label"><b>Remarks</b></label>
             <textarea class="form-control narration" id="narration" name="narration" rows="1" spellcheck="false"
                 placeholder="Remarks">{{ $journalEntry->narration }}</textarea>
         </div>
-        <div class="col-lg-3 col-sm-4">
-            <label class="form-label text-white"><b>add</b></label>
-            <button type="button" class="btn btn-xs btn-primary w-100 px-2 py-2" id="add_item">Add Account</button>
-        </div>
+        
         <div class="col-12">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped target-table align-middle mb-0">
@@ -226,4 +254,33 @@
             $('#totalDebit').val(totalDebit);
         }
     </script>
+@endpush
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

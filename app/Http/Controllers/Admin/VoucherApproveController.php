@@ -15,47 +15,113 @@ class VoucherApproveController extends Controller
     /**
      * Display a listing of the resource.
      */
+    
     public function index()
     {
         if (request()->ajax()) {
+
             $model = AccountTransactionAuto::with(['company'])
-                ->whereIn('voucher_type', ['CV', 'DV', 'JV'])
-                ->select('*', DB::raw('SUM(debit_amount) as amount'))
-                ->orderBY('id', 'desc')
-                ->orderBY('voucher_date', 'desc')->where('approve', 0)->groupBy('voucher_no');
+                ->selectRaw('
+                    MIN(id) as id,
+                    company_id,
+                    voucher_no,
+                    voucher_type,
+                    MAX(voucher_date) as voucher_date,
+                    SUM(debit_amount) as amount
+                ')
+                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV'])
+                ->where('approve', 0)
+                ->groupBy('company_id', 'voucher_type', 'voucher_no')
+                ->orderByRaw('MAX(id) DESC');
+
             return DataTables::eloquent($model)
+
                 ->addIndexColumn()
+
                 ->addColumn('checkbox', function ($row) {
-                    $checkbox = '<div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input multi_checkbox" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                    return $checkbox;
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox"
+                            class="custom-control-input multi_checkbox"
+                            id="' . $row->id . '"
+                            name="multi_checkbox[]"
+                            value="' . $row->id . '">
+
+                        <label for="' . $row->id . '" class="custom-control-label"></label>
+                    </div>';
                 })
-                ->addColumn('voucher_date', function ($row) {
-                    return date('d-m-Y', strtotime($row->voucher_date));
+
+                ->editColumn('voucher_date', function ($row) {
+
+                    return $row->voucher_date
+                        ? date('d-m-Y', strtotime($row->voucher_date))
+                        : '';
                 })
+
                 ->addColumn('debit_head', function ($row) {
-                    return AccountTransactionAuto::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransactionAuto::with('coa')
+                        ->where('company_id', $row->company_id)
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', $row->voucher_type)
                         ->where('debit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->implode(', ');
                 })
+
                 ->addColumn('credit_head', function ($row) {
-                    return AccountTransactionAuto::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransactionAuto::with('coa')
+                        ->where('company_id', $row->company_id)
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', $row->voucher_type)
                         ->where('credit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->implode(', ');
                 })
+
                 ->addColumn('actions', function ($row) {
+
                     return '<div class="justify-content-end d-flex gap-1">
-                            <a class="btn btn-outline-info btn-xs text-nowrap px-2 tt" href="' . Route('admin.voucher-approve.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="View"><i class="fas fa-eye"></i> View</a>
-                            <button type="button" class="btn btn-outline-danger btn-xs text-nowrap approve-btn px-2 tt" data-url="' . Route('admin.voucher-approve.edit', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Approve"><i class="fa fa-thumbs-up"></i> Apporve</button></div>';
+
+                        <a class="btn btn-outline-info btn-xs text-nowrap px-2 tt"
+                            href="' . route('admin.voucher-approve.show', $row->id) . '"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="View">
+
+                            <i class="fas fa-eye"></i> View
+                        </a>
+
+                        <button type="button"
+                            class="btn btn-outline-danger btn-xs text-nowrap approve-btn px-2 tt"
+                            data-url="' . route('admin.voucher-approve.edit', $row->id) . '"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="Approve">
+
+                            <i class="fa fa-thumbs-up"></i> Approve
+                        </button>
+
+                    </div>';
                 })
+
                 ->rawColumns(['checkbox', 'actions'])
+
                 ->make(true);
         }
+
         $title = 'Approve Vouchers';
         $disable_filter = true;
-        return view('admin.approve_voucher.index', compact('title', 'disable_filter'));
+
+        return view('admin.approve_voucher.index', compact(
+            'title',
+            'disable_filter'
+        ));
     }
 
     /**
@@ -109,6 +175,7 @@ class VoucherApproveController extends Controller
                         foreach ($transactions as $item) {
                             AccountTransaction::create([
                                 'company_id' => $item->company_id,
+                                'branch_id' => $item->branch_id,
                                 'account_transaction_auto_id' => $item->id,
                                 'voucher_no' => $item->voucher_no,
                                 'voucher_type' => $item->voucher_type,

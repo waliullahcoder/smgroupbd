@@ -14,48 +14,115 @@ class VoucherRejectController extends Controller
     /**
      * Display a listing of the resource.
      */
+    
     public function index()
     {
         if (request()->ajax()) {
+
             $model = AccountTransaction::with(['company'])
-                ->whereIn('voucher_type', ['CV', 'DV', 'JV'])
-                ->select('*', DB::raw('SUM(debit_amount) as amount'))
-                ->orderBY('id', 'desc')
-                ->orderBY('voucher_date', 'desc')->where('approve', 1)->groupBy('voucher_no');
+                ->selectRaw('
+                    MIN(id) as id,
+                    company_id,
+                    voucher_no,
+                    voucher_type,
+                    MAX(voucher_date) as voucher_date,
+                    SUM(debit_amount) as amount
+                ')
+                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV'])
+                ->where('approve', 1)
+                ->groupBy('company_id', 'voucher_type', 'voucher_no')
+                ->orderByRaw('MAX(id) DESC');
+
             return DataTables::eloquent($model)
+
                 ->addIndexColumn()
+
                 ->addColumn('checkbox', function ($row) {
-                    $checkbox = '<div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input multi_checkbox" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                    return $checkbox;
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox"
+                            class="custom-control-input multi_checkbox"
+                            id="' . $row->id . '"
+                            name="multi_checkbox[]"
+                            value="' . $row->id . '">
+
+                        <label for="' . $row->id . '" class="custom-control-label"></label>
+                    </div>';
                 })
-                ->addColumn('voucher_date', function ($row) {
-                    return date('d-m-Y', strtotime($row->voucher_date));
+
+                ->editColumn('voucher_date', function ($row) {
+
+                    return $row->voucher_date
+                        ? date('d-m-Y', strtotime($row->voucher_date))
+                        : '';
                 })
+
                 ->addColumn('debit_head', function ($row) {
-                    return AccountTransaction::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransaction::with('coa')
+                        ->where('company_id', $row->company_id)
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', $row->voucher_type)
                         ->where('debit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->implode(', ');
                 })
+
                 ->addColumn('credit_head', function ($row) {
-                    return AccountTransaction::with('coa')->where('voucher_no', $row->voucher_no)
+
+                    return AccountTransaction::with('coa')
+                        ->where('company_id', $row->company_id)
+                        ->where('voucher_no', $row->voucher_no)
                         ->where('voucher_type', $row->voucher_type)
                         ->where('credit_amount', '>', 0)
-                        ->get('coa_setup_id')->pluck('coa.head_name')->toArray();
+                        ->get()
+                        ->pluck('coa.head_name')
+                        ->filter()
+                        ->implode(', ');
                 })
+
                 ->addColumn('actions', function ($row) {
+
                     return '<div class="justify-content-end d-flex gap-1">
-                            <a class="btn btn-outline-info btn-xs text-nowrap px-2 tt" href="' . Route('admin.voucher-reject.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="View"><i class="fas fa-eye"></i> View</a>
-                            <button type="button" class="btn btn-outline-danger btn-xs text-nowrap approve-btn px-2 tt" data-url="' . Route('admin.voucher-reject.edit', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Approve"><i class="fa fa-thumbs-down"></i> Refuse</button></div>';
+
+                        <a class="btn btn-outline-info btn-xs text-nowrap px-2 tt"
+                            href="' . route('admin.voucher-reject.show', $row->id) . '"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="View">
+
+                            <i class="fas fa-eye"></i> View
+                        </a>
+
+                        <button type="button"
+                            class="btn btn-outline-danger btn-xs text-nowrap approve-btn px-2 tt"
+                            data-url="' . route('admin.voucher-reject.edit', $row->id) . '"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="Refuse">
+
+                            <i class="fa fa-thumbs-down"></i> Refuse
+                        </button>
+
+                    </div>';
                 })
+
                 ->rawColumns(['checkbox', 'actions'])
+
                 ->make(true);
         }
+
         $title = 'Refuse Vouchers';
         $disable_filter = true;
-        return view('admin.refuse_voucher.index', compact('title', 'disable_filter'));
+
+        return view('admin.refuse_voucher.index', compact(
+            'title',
+            'disable_filter'
+        ));
     }
+
 
     /**
      * Show the form for creating a new resource.

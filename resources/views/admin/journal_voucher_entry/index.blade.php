@@ -78,8 +78,10 @@
                         searchable: false,
                     },
                     {
-                        data: 'credit_amount',
-                        name: 'credit_amount'
+                        data: 'total_credit',
+                        name: 'total_credit',
+                        orderable: false,
+                        searchable: false,
                     },
                     {
                         data: 'approve',
