@@ -30,6 +30,25 @@
                         <div class="row g-3">
 
                             <!-- Payroll Information -->
+                             <div class="col-lg-4 col-sm-6">
+                                <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+                                <select name="company_id" id="company_id" class="select form-select"
+                                        data-placeholder="Select Company" required>
+                                    <option value=""></option>
+                                    @foreach ($companies as $company)
+                                        <option value="{{ $company->id }}">{{ $company->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-lg-4 col-sm-6">
+                                <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+                                <select name="project_id" id="project_id" class="select form-select"
+                                        data-placeholder="Select Project" required disabled>
+                                    <option value=""></option>
+                                </select>
+                            </div>
+
 
                             <div class="col-lg-4">
                                 <label><b>Payroll Month</b></label>
@@ -269,7 +288,6 @@
                                 <label><b>Payment Status</b></label>
                                 <select name="payment_status" class="form-control">
                                     <option>Pending</option>
-                                    <option>Paid</option>
                                     <option>Cancelled</option>
                                 </select>
                             </div>
@@ -378,4 +396,34 @@ $(document).on('keyup change','.salary,.deduction,.addition',calc);
 calc();
 </script>
 
+@endpush
+
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

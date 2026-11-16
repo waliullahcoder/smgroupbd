@@ -27,10 +27,38 @@
                   <form action="{{ route('admin.payroll.update',$id) }}" method="POST">
                             @csrf
                             @method('PUT')
-                       <input type="hidden" name="employee_id" value="{{$data->id}}">
+                       <input type="hidden" name="employee_id" value="{{$staff->id}}">
                         <div class="row g-3">
 
                             <!-- Payroll Information -->
+
+                            <div class="col-lg-4 col-sm-6">
+                                <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+                                <select name="company_id" id="company_id" class="select form-select"
+                                        data-placeholder="Select Company" required>
+                                    <option value=""></option>
+                                    @foreach ($companies as $company)
+                                        <option value="{{ $company->id }}"
+                                            {{ old('company_id', $data->company_id) == $company->id ? 'selected' : '' }}>
+                                            {{ $company->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-lg-4 col-sm-6">
+                                <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+                                <select name="project_id" id="project_id" class="select form-select"
+                                        data-placeholder="Select Project" required>
+                                    <option value=""></option>
+                                    @foreach ($projects as $project)
+                                        <option value="{{ $project->id }}"
+                                            {{ old('project_id', $data->branch_id) == $project->id ? 'selected' : '' }}>
+                                            {{ $project->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
 
                             <div class="col-lg-4">
                                 <label><b>Payroll Month</b></label>
@@ -254,24 +282,24 @@
 
                             <div class="col-lg-3">
                                 <label><b>Bank Name</b></label>
-                                <input type="text" name="bank_name" class="form-control" value="{{ old('ac_branch',$data->ac_branch) }}">
+                                <input type="text" name="bank_name" class="form-control" value="{{ old('ac_branch',$staff->ac_branch) }}">
                             </div>
 
                             <div class="col-lg-3">
                                 <label><b>Account No</b></label>
-                                <input type="text" name="account_no" class="form-control" value="{{ old('ac_no',$data->ac_no) }}">
+                                <input type="text" name="account_no" class="form-control" value="{{ old('ac_no',$staff->ac_no) }}">
                             </div>
 
                             <div class="col-lg-3">
                                 <label><b>Transaction No</b></label>
-                                <input type="text" name="transaction_no" class="form-control" value="{{ old('transaction_no',$data->transaction_no) }}">
+                                <input type="text" name="transaction_no" class="form-control" value="{{ old('transaction_no',$staff->transaction_no) }}">
                             </div>
 
                             <div class="col-lg-3">
                                 <label><b>Payment Status</b></label>
                                 <select name="payment_status" class="form-control">
                                 <option value="Pending" {{ $data->payment_status=='Pending'?'selected':'' }}>Pending</option>
-                                <option value="Paid" {{ $data->payment_status=='Paid'?'selected':'' }}>Paid</option>
+                                <!-- <option value="Paid" {{ $data->payment_status=='Paid'?'selected':'' }}>Paid</option> -->
                                 <option value="Cancelled" {{ $data->payment_status=='Cancelled'?'selected':'' }}>Cancelled</option>
                             </select>
                             </div>
@@ -358,4 +386,34 @@ $(document).on('keyup change','.salary,.deduction,.addition',calc);
 calc();
 </script>
 
+@endpush
+
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
 @endpush

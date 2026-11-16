@@ -26,6 +26,34 @@
 
             <div class="row">
 
+             <div class="col-md-6 mb-3">
+            <label for="company_id" class="form-label"><b>Company <span class="text-danger">*</span></b></label>
+            <select name="company_id" id="company_id" class="select form-select"
+                    data-placeholder="Select Company" required>
+                <option value=""></option>
+                @foreach ($companies as $company)
+                    <option value="{{ $company->id }}"
+                        {{ old('company_id', $expense->company_id) == $company->id ? 'selected' : '' }}>
+                        {{ $company->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label for="project_id" class="form-label"><b>Project <span class="text-danger">*</span></b></label>
+            <select name="project_id" id="project_id" class="select form-select"
+                    data-placeholder="Select Project" required>
+                <option value=""></option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}"
+                        {{ old('project_id', $expense->branch_id) == $project->id ? 'selected' : '' }}>
+                        {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
                 <div class="col-md-6 mb-3">
                     <label class="form-label">
                         Expense Head <span class="text-danger">*</span>
@@ -181,3 +209,34 @@
 </div>
 
 @endsection
+
+
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        $('#company_id').on('change', function () {
+            var companyId = $(this).val();
+            var $project = $('#project_id');
+
+            $project.empty().append('<option value=""></option>').prop('disabled', true);
+
+            if (!companyId) {
+                $project.trigger('change');
+                return;
+            }
+
+            var url = "{{ route('admin.store.projects', ':id') }}".replace(':id', companyId);
+
+            $.get(url, function (projects) {
+                $.each(projects, function (i, p) {
+                    $project.append('<option value="' + p.id + '">' + $('<div>').text(p.name).html() + '</option>');
+                });
+                $project.prop('disabled', false).trigger('change');
+            }).fail(function () {
+                alert('Project load kora jayni');
+            });
+        });
+    });
+</script>
+@endpush

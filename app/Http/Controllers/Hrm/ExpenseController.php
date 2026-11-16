@@ -33,6 +33,7 @@ class ExpenseController extends Controller
                 ->select(
                     'exp.id',
                     'c.head_name',
+                    'exp.expense_no',
                     'exp.expense_month',
                     'exp.expense_year',
                     'exp.expense_amount',
@@ -78,8 +79,11 @@ class ExpenseController extends Controller
                         </a>';
                     }
 
-                    if(auth()->user()->can('admin.expense.edit')){
-                        $btn .= '<a href="'.route('admin.expense.edit',$row->id).'"
+                   if (
+                        auth()->user()->can('admin.expense.edit') &&
+                        !str_starts_with($row->expense_no, 'STP')
+                    ) {
+                        $btn .= '<a href="' . route('admin.expense.edit', $row->id) . '"
                             class="btn btn-sm btn-warning">
                             <i class="fas fa-edit"></i>
                         </a>';
@@ -140,7 +144,6 @@ class ExpenseController extends Controller
 
                 // Expense Head
                 $coa = CoaSetup::findOrFail($request->expense_head_id);
-
                 // Expense Insert
                 DB::table('hrm_expense')->insert([
                     'company_id'      => $request->company_id,
@@ -226,40 +229,118 @@ class ExpenseController extends Controller
             ->where('parent_id', 4)
             ->orderBy('head_name')
             ->get();
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $expense->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
 
-        return view('hrm.expense.edit', compact('expense', 'coas'));
+        return view('hrm.expense.edit', compact('expense', 'coas','companies','projects'));
     }
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'expense_head_id'   => 'required|exists:coa_setups,id',
-            'expense_month' => 'required|integer|between:1,12',
-            'expense_year'  => 'required|digits:4',
-            'expense_amount'        => 'required|numeric|min:0',
-            'expense_date'  => 'required|date',
-            'status'        => 'required|in:Pending,Approved,Paid',
-            'remarks'       => 'nullable|string|max:1000',
-        ]);
-      
-        DB::table('hrm_expense')
-            ->where('id', $id)
-            ->update([
-                'expense_head_id'   => $request->expense_head_id,
-                'expense_month' => $request->expense_month,
-                'expense_year'  => $request->expense_year,
-                'expense_amount'   => $request->expense_amount,
-                'expense_date'  => $request->expense_date,
-                'remarks'       => $request->remarks,
-                'status'        => $request->status,
-                'updated_by'    => auth()->id(),
-                'updated_at'    => now(),
-            ]);
+    
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'expense_head_id' => 'required|exists:coa_setups,id',
+        'expense_month'   => 'required|integer|between:1,12',
+        'expense_year'    => 'required|digits:4',
+        'expense_amount'  => 'required|numeric|min:0',
+        'expense_date'    => 'required|date',
+        'status'          => 'required|in:Pending,Approved,Paid',
+        'remarks'         => 'nullable|string|max:1000',
+    ]);
+
+    try {
+
+        DB::transaction(function () use ($request, $id) {
+
+            // Find Expense
+            $expense = DB::table('hrm_expense')
+                ->where('id', $id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$expense) {
+                throw new \Exception('Expense not found.');
+            }
+
+            // Expense Head
+            $coa = CoaSetup::findOrFail($request->expense_head_id);
+
+            // Update Expense
+            DB::table('hrm_expense')
+                ->where('id', $id)
+                ->update([
+                    'company_id'      => $request->company_id,
+                    'branch_id'       => $request->project_id,
+                    'expense_head_id' => $request->expense_head_id,
+                    'expense_month'   => $request->expense_month,
+                    'expense_year'    => $request->expense_year,
+                    'expense_amount'  => $request->expense_amount,
+                    'expense_date'    => $request->expense_date,
+                    'remarks'         => $request->remarks,
+                    'status'          => $request->status,
+                    'updated_by'      => auth()->id(),
+                    'updated_at'      => now(),
+                ]);
+
+            // Update Account Transaction
+            $transaction = AccountTransactionAuto::withTrashed()
+                ->where('voucher_no', $expense->expense_no)
+                ->where('voucher_type', 'Expense')
+                ->first();
+
+            if ($transaction) {
+
+                // Update Existing Transaction
+                $transaction->update([
+                    'company_id'     => $request->company_id,
+                    'branch_id'      => $request->project_id,
+                    'voucher_date'   => date('Y-m-d', strtotime($request->expense_date)),
+                    'coa_setup_id'   => $request->expense_head_id,
+                    'coa_head_code'  => $coa->head_name,
+                    'narration'      => 'Expense Against PAYMENT NO - ' . $expense->expense_no,
+                    'debit_amount'   => 0,
+                    'credit_amount'  => $request->expense_amount,
+                    'updated_by'     => auth()->id(),
+                    'updated_at'     => now(),
+                ]);
+
+            } else {
+
+                // Insert Transaction If Not Exists
+                AccountTransactionAuto::create([
+                    'company_id'     => $request->company_id,
+                    'branch_id'      => $request->project_id,
+                    'voucher_no'     => $expense->expense_no,
+                    'voucher_type'   => 'Expense',
+                    'voucher_date'   => date('Y-m-d', strtotime($request->expense_date)),
+                    'coa_setup_id'   => $request->expense_head_id,
+                    'coa_head_code'  => $coa->head_name,
+                    'narration'      => 'Expense Against PAYMENT NO - ' . $expense->expense_no,
+                    'debit_amount'   => 0,
+                    'credit_amount'  => $request->expense_amount,
+                    'created_by'     => auth()->id(),
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+            }
+
+        });
 
         return redirect()
             ->route('admin.expense.index')
             ->withSuccessMessage('Expense updated successfully.');
+
+    } catch (\Exception $e) {
+
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors('Expense could not be updated: ' . $e->getMessage());
     }
+}
+
 
     
 }

@@ -27,6 +27,7 @@
                 <tr>
 
                     <th width="50">SL</th>
+                    <th>Expense No.</th>
                     <th>Expense Head</th>
                     <th>Expense Month</th>
                     <th>Year</th>
@@ -66,7 +67,7 @@ $('.dataTable').DataTable({
                 className: 'btn btn-success btn-sm',
                 title: 'Loan List',
                 exportOptions: {
-                    columns: [0,1,2,3,4,5,6,7,8,9]
+                    columns: [0,1,2,3,4,5,6,7,8,9,10]
                 }
             }
         ],
@@ -82,6 +83,7 @@ $('.dataTable').DataTable({
             return meta.row + meta.settings._iDisplayStart + 1;
         }
     },
+    {data:'expense_no',name:'exp.expense_no'},
     {data:'head_name',name:'c.head_name'},
     {data:'expense_month',name:'exp.expense_month'},
     {data:'expense_year',name:'exp.expense_year'},

@@ -29,47 +29,94 @@ class VendorPaymentController extends Controller
     /**
      * Display a listing of the resource.
      */
+    
     public function index()
     {
         if (request()->ajax()) {
-            $model = VendorPayment::with(['company', 'vendor', 'staff'])->whereNot('type', 'return')->orderBy('id', 'desc');
+
             $type = request('type');
-            if (!empty($type) && $type == 'trash') {
+
+            $model = VendorPayment::with(['company', 'vendor', 'staff'])
+                ->where('type', '!=', 'return')
+                ->orderByDesc('id');
+
+            if ($type == 'trash') {
                 $model->onlyTrashed();
             }
+
             return DataTables::eloquent($model)
-                ->addColumn('checkbox', function ($row) {
-                    $pay_transaction = AccountTransactionAuto::withTrashed()->where('voucher_no', $row->payment_no)->where('voucher_type', 'Vendor Payment')->first();
-                    if (!is_null($pay_transaction) && $pay_transaction->posted == 0 || is_null($pay_transaction)) {
-                        $checkbox = '<div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input ' . (!empty(request('type')) && request('type') == "trash" ? 'trash_multi_checkbox' : 'multi_checkbox') . '" id="' . $row->id . '" name="multi_checkbox[]" value="' . $row->id . '"><label for="' . $row->id . '" class="custom-control-label"></label></div>';
-                        return $checkbox;
+
+                ->addColumn('checkbox', function ($row) use ($type) {
+
+                    $payTransaction = AccountTransactionAuto::withTrashed()
+                        ->where('voucher_no', $row->payment_no)
+                        ->where('voucher_type', 'Vendor Payment')
+                        ->first();
+
+                    if ($payTransaction && $payTransaction->posted == 1) {
+                        return '';
                     }
+
+                    $class = $type == 'trash'
+                        ? 'trash_multi_checkbox'
+                        : 'multi_checkbox';
+
+                    return '<div class="custom-control custom-checkbox">
+                        <input type="checkbox"
+                            class="custom-control-input ' . $class . '"
+                            id="' . $row->id . '"
+                            name="multi_checkbox[]"
+                            value="' . $row->id . '">
+
+                        <label for="' . $row->id . '"
+                            class="custom-control-label"></label>
+                    </div>';
                 })
+
                 ->addColumn('date', function ($row) {
-                    return date('d-m-Y', strtotime($row->payment_date));
+                    return $row->payment_date
+                        ? date('d-m-Y', strtotime($row->payment_date))
+                        : '';
                 })
-                ->addColumn('actions', function ($row) {
-                    $type = request('type');
+
+                ->addColumn('actions', function ($row) use ($type) {
+
+                    $payTransaction = AccountTransactionAuto::withTrashed()
+                        ->where('voucher_no', $row->payment_no)
+                        ->where('voucher_type', 'Vendor Payment')
+                        ->first();
+
+                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 btn-info"
+                        href="' . route('admin.vendor-payment.show', $row->id) . '"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        title="Print Voucher"
+                        target="_blank">
+                        <i class="fal fa-print"></i>
+                    </a>';
+
+                    // Posted transaction হলে শুধু Print দেখাবে
+                    if ($payTransaction && $payTransaction->posted == 1) {
+                        return $actionBtn;
+                    }
+
                     $data = [
                         'id' => $row->id,
-                        'edit' => !empty($type) && $type == 'trash' ? false : true,
+                        'edit' => $type != 'trash',
                     ];
 
-                    $actionBtn = '<a class="btn btn-sm border-0 px-10px fs-15 btn-info" href="' . Route('admin.vendor-payment.show', $row->id) . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Print Voucher" target="_blank"><i class="fal fa-print"></i></a>';
-                    $pay_transaction = AccountTransactionAuto::withTrashed()->where('voucher_no', $row->payment_no)->where('voucher_type', 'Vendor Payment')->first();
-                    if (!is_null($pay_transaction) && $pay_transaction->posted == 0 || is_null($pay_transaction)) {
-                        return ActionButtons::actions($data, $actionBtn);
-                    }
-                    return $actionBtn;
+                    return ActionButtons::actions($data, $actionBtn);
                 })
+
                 ->rawColumns(['checkbox', 'actions'])
                 ->make(true);
         }
 
         $title = "Vendor Payment";
+
         return view('admin.vendor_payment.index', compact('title'));
     }
+
 
     public function paymentNo()
     {
@@ -173,6 +220,7 @@ class VendorPaymentController extends Controller
                             'company_id' => $request->company_id,
                             'branch_id' => $request->project_id,
                             'expense_head_id' => $request->coa_setup_id,
+                            'expense_no' => $vendor_payment->payment_no,
                             'expense_month' => Carbon::now()->month,
                             'expense_year' => Carbon::now()->year,
                             'expense_amount' => $request->total_paid,
@@ -379,6 +427,7 @@ class VendorPaymentController extends Controller
                     'company_id' => $request->company_id,
                     'branch_id' => $request->project_id,
                     'expense_head_id' => $request->coa_setup_id,
+                    'expense_no' => $paymentNo,
                     'expense_month' => Carbon::now()->month,
                     'expense_year' => Carbon::now()->year,
                     'expense_amount' => $request->total_paid,

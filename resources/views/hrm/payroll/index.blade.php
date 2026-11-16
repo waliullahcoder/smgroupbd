@@ -230,39 +230,55 @@ $(document).on('click','.btn-payroll',function(){
 
 });
 
-$('#payrollForm').submit(function(e){
 
+$('#payrollForm').submit(function(e){
     e.preventDefault();
 
     $.ajax({
-
-        url:"{{ url('admin/payroll/update-status') }}/"+$('#payroll_id').val(),
-
-        type:"POST",
-
-        data:{
-            _token:"{{ csrf_token() }}",
-            payment_status:$('#payment_status').val(),
-            note:$('#note').val()
+        url: "{{ url('admin/payroll/update-status') }}/" + $('#payroll_id').val(),
+        type: "POST",
+        data: {
+            _token: "{{ csrf_token() }}",
+            payment_status: $('#payment_status').val(),
+            note: $('#note').val()
         },
+        success: function(res){
 
-        success:function(res){
+            if(res.status){
 
-            $('#payrollModal').modal('hide');
+                $('#payrollModal').modal('hide');
 
-            $('.dataTable').DataTable().ajax.reload(null,false);
+                $('.dataTable').DataTable().ajax.reload(null, false);
+
+                Swal.fire(
+                    'Success',
+                    res.message,
+                    'success'
+                );
+
+            } else {
+
+                Swal.fire(
+                    'Warning',
+                    res.message,
+                    'warning'
+                );
+
+            }
+        },
+        error: function(xhr){
+
+            let message = xhr.responseJSON?.message || 'Something went wrong!';
 
             Swal.fire(
-                'Success',
-                'Payroll updated successfully.',
-                'success'
+                'Error',
+                message,
+                'error'
             );
-
         }
-
     });
-
 });
+
 </script>
 
 @endpush

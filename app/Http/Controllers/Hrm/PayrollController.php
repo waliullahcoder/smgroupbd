@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Hrm;
 use App\Models\Client;
 use App\Models\ClientCategory;
 use App\Models\CoaSetup;
+use App\Models\Company;
+use App\Models\Branch;
 use App\Models\User;
+use App\Models\Staff;
 use App\Models\Role;
+use App\Models\AccountTransactionAuto;
 use App\Http\Controllers\Controller;
 use App\Services\ActionButtons\ActionButtons;
 use Illuminate\Http\Request;
@@ -107,7 +111,7 @@ class PayrollController extends Controller
                             </button>';
                         }
                     }
-                    if(auth()->user()->can('admin.payroll.edit')){
+                    if(auth()->user()->can('admin.payroll.edit') && $row->payment_status != 'Paid'){
                         $btn .= '<a href="'.route('admin.payroll.edit',$row->id).'"
                             class="btn btn-sm btn-warning">
                             <i class="fas fa-edit"></i>
@@ -144,9 +148,10 @@ class PayrollController extends Controller
             ->where('status',1)
             ->orderBy('name')
             ->get();
+        $companies = Company::orderBy('name', 'asc')->get();    
         $employee = DB::table('staff')->where('id',$request->employee_id)->first()??[];
 
-        return view('hrm.payroll.create',compact('employees','employee'));
+        return view('hrm.payroll.create',compact('employees','employee','companies'));
     }
 
     public function salaryStructure(Request $request){
@@ -373,23 +378,166 @@ class PayrollController extends Controller
         );
     }
 
-    public function updateStatus(Request $request, $id)
-    {
-        DB::table('hrm_employee_payrolls')
-            ->where('id', $id)
-            ->update([
-                'payment_status' => $request->payment_status,
-                'remarks'           => $request->note,
-                'payment_date'   => $request->payment_status == 'Paid'
-                                    ? now()->toDateString()
-                                    : null,
-                'updated_at'     => now(),
+   
+public function updateStatus(Request $request, $id)
+{
+    if ($request->payment_status == 'Pending') {
+        return response()->json([
+            'status'  => false,
+            'message' => 'Please select Paid or Cancelled status!'
+        ]);
+    }
+
+    try {
+
+        if ($request->payment_status == 'Paid') {
+
+            DB::transaction(function () use ($request, $id) {
+
+                $payroll = DB::table('hrm_employee_payrolls')
+                    ->where('id', $id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$payroll) {
+                    throw new \Exception('Payroll record not found!');
+                }
+
+                if ($payroll->payment_status == 'Paid') {
+                    throw new \Exception('This salary has already been paid!');
+                }
+
+                // Generate Payment No
+                $payment_no = $this->paymentGenerateNo();
+
+                // Expense Head
+                $coa = CoaSetup::findOrFail(4);
+
+                // Expense Insert
+                DB::table('hrm_expense')->insert([
+                    'company_id'      => $payroll->company_id,
+                    'branch_id'       => $payroll->branch_id,
+                    'expense_no'      => $payroll->payroll_no,
+                    'expense_head_id' => $coa->id,
+                    'expense_month'   => $payroll->payroll_month,
+                    'expense_year'    => $payroll->payroll_year,
+                    'expense_amount'  => $payroll->net_salary,
+                    'expense_date'    => now()->toDateString(),
+                    'remarks'         => $request->note,
+                    'status'          => 1,
+                    'created_by'      => auth()->id(),
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+
+                // Account Transaction Insert
+                $postData[] = [
+                    'company_id'    => $payroll->company_id,
+                    'branch_id'     => $payroll->branch_id,
+                    'voucher_no'    => $payroll->payroll_no,
+                    'voucher_type'  => 'Salary',
+                    'voucher_date'  => now()->toDateString(),
+                    'coa_setup_id'  => $coa->id,
+                    'coa_head_code' => $coa->head_name,
+                    'narration'     => 'Salary Disbursed Against PAYMENT NO - ' . $payment_no,
+                    'debit_amount'  => $payroll->net_salary,
+                    'credit_amount' => 0,
+                    'created_by'    => auth()->id(),
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ];
+
+                AccountTransactionAuto::insert($postData);
+
+                // Update Payroll
+                DB::table('hrm_employee_payrolls')
+                    ->where('id', $id)
+                    ->update([
+                        'payment_status' => 'Paid',
+                        'remarks'        => $request->note,
+                        'payment_date'   => now()->toDateString(),
+                        'updated_at'     => now(),
+                    ]);
+
+            });
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Paid Salary disbursed successfully.'
             ]);
 
+        } elseif ($request->payment_status == 'Cancelled') {
+
+            $payroll = DB::table('hrm_employee_payrolls')
+                ->where('id', $id)
+                ->first();
+
+            if (!$payroll) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Payroll record not found!'
+                ]);
+            }
+
+            if ($payroll->payment_status == 'Paid') {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Paid payroll cannot be cancelled!'
+                ]);
+            }
+
+            DB::table('hrm_employee_payrolls')
+                ->where('id', $id)
+                ->update([
+                    'payment_status' => 'Cancelled',
+                    'remarks'        => $request->note,
+                    'payment_date'   => null,
+                    'updated_at'     => now(),
+                ]);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payroll salary cancelled successfully.'
+            ]);
+
+        }
+
         return response()->json([
-            'status'  => true,
-            'message' => 'Payroll updated successfully.'
+            'status'  => false,
+            'message' => 'Invalid payment status selected!'
         ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'status'  => false,
+            'message' => $e->getMessage()
+        ], 422);
+    }
+}
+
+
+
+
+    public function paymentGenerateNo()
+    {
+        $prefix = "SAL" . date('ym');
+
+        $data = DB::table('hrm_employee_payrolls')
+            ->where('payroll_no', 'like', $prefix . '%')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($data) {
+            $trim = str_replace($prefix, '', $data->payroll_no);
+            $dataPrefix = (int) $trim + 1;
+
+            $invoice = $prefix . str_pad($dataPrefix, 6, '0', STR_PAD_LEFT);
+        } else {
+            $invoice = $prefix . '000001';
+        }
+
+        return $invoice;
     }
 
 
@@ -442,6 +590,9 @@ class PayrollController extends Controller
         $net_salary = $gross_salary + $total_addition - $total_deduction;
 
         DB::table('hrm_employee_payrolls')->insert([
+            'company_id'             => $request->company_id,
+            'branch_id'              => $request->project_id,
+            'payroll_no'             => $this->paymentGenerateNo(),
             'employee_id'            => $request->employee_id,
 
             'payroll_month'          => $request->payroll_month,
@@ -511,10 +662,17 @@ class PayrollController extends Controller
 
     public function edit($id)
     {
-        $data = DB::table('hrm_employee_payrolls as ep')
-            ->leftJoin('staff as stf', 'stf.id','=','ep.employee_id')
-            ->where('ep.id', $id)
-            ->first();
+         
+      $data = DB::table('hrm_employee_payrolls as ep')
+               // ->join('staff as stf', 'stf.id', '=', 'ep.employee_id')
+                ->where('ep.id', $id)
+                ->first();
+      $staff = Staff::find($data->employee_id);
+           // dd($id,$data);
+        $companies = Company::orderBy('name', 'asc')->get();
+        $projects = Branch::where('company_id', $data->company_id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
 
         if (!$data) {
             abort(404);
@@ -528,7 +686,10 @@ class PayrollController extends Controller
         return view('hrm.payroll.edit', compact(
             'data',
             'employees',
-            'id'
+            'id',
+            'companies',
+            'projects',
+            'staff'
         ));
     }
 
@@ -547,7 +708,8 @@ class PayrollController extends Controller
         DB::table('hrm_employee_payrolls')
             ->where('id', $id)
             ->update([
-
+                 'company_id'             => $request->company_id,
+                 'branch_id'              => $request->project_id,
                 'employee_id'            => $request->employee_id,
 
                 'payroll_month'          => $request->payroll_month,
