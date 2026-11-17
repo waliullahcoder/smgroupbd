@@ -83,7 +83,7 @@ class BranchController extends Controller
 
         DB::transaction(function () use ($request) {
             $branch = Branch::create([
-                'company_id' => $request->company_id ?? Auth::user()->company_id,
+                'company_id' => $request->company_id,
                 'prefix' => $request->prefix,
                 'name' => $request->name,
                 'trade_license' => $request->trade_license,
@@ -94,16 +94,6 @@ class BranchController extends Controller
                 'website' => $request->website,
                 'phone' => $request->phone,
                 'fax' => $request->fax,
-                'address' => $request->address,
-                'created_by' => Auth::user()->id,
-            ]);
-
-            Store::create([
-                'company_id' => $request->company_id ?? Auth::user()->company_id,
-                'branch_id' => $branch->id,
-                'code' => $request->prefix,
-                'type' => 'Branch Store',
-                'name' => $request->name . ' Store',
                 'address' => $request->address,
                 'created_by' => Auth::user()->id,
             ]);
@@ -154,7 +144,7 @@ class BranchController extends Controller
 
         $branch = Branch::findOrFail($id);
         $branch->update([
-            'company_id' => $request->company_id ?? Auth::user()->company_id,
+            'company_id' => $request->company_id,
             'prefix' => $request->prefix,
             'name' => $request->name,
             'trade_license' => $request->trade_license,

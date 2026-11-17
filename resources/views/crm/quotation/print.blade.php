@@ -1,183 +1,379 @@
-@extends('layouts.admin.invoice_app')
-@push('css')
+@php
+    $netAmount = $data->net_amount ?? ($data->total_amount - $data->discount);
+    $taxPct = rtrim(rtrim(number_format($data->tax_percentage ?? 0, 2), '0'), '.');
+@endphp
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quotation - {{ $data->quotation }}</title>
+
     <style>
-        @page {
-            size: a4;
+        @page { size: A4; margin: 10mm; }
+
+        :root {
+            --brand: #1f4e79;
+            --brand-light: #eef3f8;
+            --line: #d5dce4;
+            --text: #222;
+            --muted: #6b7785;
         }
 
-        .info-table thead {
-            background-color: #fff;
-            color: #333;
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .info-table thead th {
-            border-bottom: 2px solid #000 !important;
-            border-right: 2px dotted #888;
+        body {
+            margin: 0;
+            background: #fff;
+            font-family: 'PT Serif', Georgia, serif;
+            color: var(--text);
+            font-size: 13px;
+            line-height: 1.5;
         }
 
-        .info-table tfoot td,
-        .info-table tbody td {
-            border-top: 2px dotted #888;
-            border-right: 2px dotted #888;
+        .quotation-page {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 10mm;
         }
 
-        .staff {
+        /* ---------- Header ---------- */
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 14px;
+            border-bottom: 3px solid var(--brand);
+        }
+        .q-logo { flex: 0 0 auto; }
+        .q-logo img { max-height: 80px; max-width: 220px; object-fit: contain; }
+        .q-logo .logo-text { font-size: 26px; font-weight: bold; color: var(--brand); }
+
+        .q-company { text-align: right; }
+        .q-company h2 {
+            margin: 0 0 4px;
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--brand);
+        }
+        .q-company p { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+        /* ---------- Title ---------- */
+        .q-title-wrap { text-align: center; margin: 16px 0 14px; }
+        .q-title {
+            display: inline-block;
+            padding: 5px 40px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            border-radius: 3px;
+        }
+
+        /* ---------- Info boxes ---------- */
+        .q-info { display: flex; gap: 14px; margin-bottom: 14px; }
+        .q-box {
+            flex: 1;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .q-box-head {
+            background: var(--brand-light);
+            color: var(--brand);
+            font-weight: bold;
+            padding: 4px 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--line);
+        }
+        .q-box-body { padding: 8px 12px; }
+        .q-row { display: flex; padding: 2px 0; }
+        .q-row .label { width: 105px; color: var(--muted); flex: 0 0 105px; }
+        .q-row .value { flex: 1; font-weight: 600; }
+
+        /* ---------- Items ---------- */
+        .q-table { width: 100%; border-collapse: collapse; }
+        .q-table thead th {
+            background: var(--brand);
+            color: #fff;
+            padding: 7px 10px;
+            font-weight: bold;
+            font-size: 12.5px;
+            border: 1px solid var(--brand);
+        }
+        .q-table tbody td {
+            padding: 6px 10px;
+            border: 1px solid var(--line);
+        }
+        .q-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .q-table tr { page-break-inside: avoid; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        /* ---------- Totals ---------- */
+        .q-bottom {
+            display: flex;
+            gap: 14px;
+            margin-top: 12px;
+            align-items: flex-start;
+            page-break-inside: avoid;
+        }
+        .q-words {
+            flex: 1;
+            border: 1px dashed var(--line);
+            border-radius: 4px;
+            padding: 8px 12px;
+        }
+        .q-words .label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .q-totals {
+            width: 300px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .q-totals .t-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 12px;
+            border-bottom: 1px solid var(--line);
+        }
+        .q-totals .t-row:last-child { border-bottom: 0; }
+        .q-totals .t-row.net {
+            background: var(--brand);
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* ---------- Note ---------- */
+        .q-note {
+            margin-top: 14px;
+            border-left: 4px solid var(--brand);
+            background: var(--brand-light);
+            padding: 8px 12px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* ---------- Signature / Footer ---------- */
+        .q-footer { margin-top: 70px; page-break-inside: avoid; }
+        .q-sign { display: flex; justify-content: space-between; gap: 30px; }
+        .q-sign .sign-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+        }
+        .q-sign .sign-item .staff {
             position: absolute;
-            top: -25px;
+            top: -24px;
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
+            font-style: italic;
+        }
+        .q-hotline {
+            margin-top: 16px;
+            background: #ddd;
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+        }
+        .q-credit {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--muted);
         }
 
-        .info-table th,
-        .info-table td,
-        .header-table td {
-            line-height: 1;
-            padding: 3px 12px 1px !important;
-            font-family: 'PT Serif', serif;
-            font-weight: normal;
-        }
-
-        .info-table th,
-        .info-table td {
-            padding: 0px 12px 5px !important;
-        }
-
-        .d-inline-block {
-            display: inline-block;
-        }
-
-        .overflow-hidden {
-            overflow: hidden;
+        @media print {
+            .quotation-page { padding: 0; max-width: none; }
         }
     </style>
-@endpush
-@section('content')
-    <div class="content-wrapper">
-        <table class="table mb-0 header-table" style="border: 2px solid black;">
-            <tr>
-                <td>
-                    <b class="d-inline-block" style="min-width: 100px;">Quotation No :</b>
-                    <span class="d-inline-block" style="min-width: 200px;">{{ $data->quotation }}</span>
-                </td>
-                <td class="text-right">
-                    <b class="d-inline-block text-left">Quotation Date :</b>
-                    <span class="d-inline-block" style="min-width: 130px;">{{ date('d-m-Y', strtotime($data->date)) }}</span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <b class="d-inline-block" style="min-width: 100px;">Client Name :</b>
-                    <span class="d-inline-block" style="min-width: 200px;">{{ @$data->company_name }}</span>
-                </td>
-                <td class="text-right">
-                    <b class="d-inline-block text-left">Contact Number :</b>
-                    <span class="d-inline-block" style="min-width: 130px;">{{ @$data->mobile }}</span>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <b class="d-inline-block" style="min-width: 100px;">Address :</b>
-                    <span class="d-inline-block" style="min-width: 200px;">{{ @$data->address }}</span>
-                </td>
-            </tr>
-        </table>
-        <table class="table info-table align-middle" style="border: 2px solid black; margin-top: -2px; margin-bottom: 5px;">
-            <thead>
-                <tr>
-                    <th class="text-center" width="40px">SL#</th>
-                    <th>Code</th>
-                    <th>Product Name</th>
-                    <th width="70">Quantity</th>
-                    <th width="70">Rate</th>
-                    <th width="70" class="text-right">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($quotation_details as $item)
-                    <tr>
-                        <td class="text-center" width="40px">{{ $loop->iteration }}</td>
-                        <td>{{ @$item->code }}</td>
-                            <td>{{ @$item->name }}</td>
-                        <td width="50">{{ @$item->qty }}</td>
-                        <td width="50">{{ number_format($item->rate, 2, '.', ',') }}</td>
-                        <td class="text-right" width="70">{{ number_format($item->rate * $item->qty, 2, '.', ',') }}
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="{{ $data->product_type == 'Consumer' ? '2' : '3' }}" rowspan="3"><b>In words :</b>
-                        {{ \App\HelperClass::convertNumber($data->total_amount - $data->discount) }} Taka
-                        Only</td>
-                    <td class="text-right" colspan="2"><b>Total Amount :</b></td>
-                    <td class="text-right" width="70">{{ number_format($data->total_amount, 2, '.', ',') }}</td>
-                </tr>
-                @if ($data->discount > 0)
-                    <tr>
-                        <td class="text-right" colspan="2"><b>Discount Amount :</b></td>
-                        <td class="text-right" width="70">{{ number_format($data->discount, 2, '.', ',') }}</td>
-                    </tr>
-                @endif
-                <tr>
-                    <td class="text-right" colspan="2"><b>Net Quotation Amount :</b></td>
-                    <td class="text-right" width="70">
-                        {{ number_format($data->total_amount - $data->discount, 2, '.', ',') }}</td>
-                </tr>
-            </tfoot>
-        </table>
-        <table class="table mb-0 info-table align-middle" style="border: 2px solid black;">
-            <tbody>
-               
-                <tr>
-                    <td class="text-right" colspan="5"><b>Net Payable :</b></td>
-                    @php
-                        $payable = $data->total_amount - $data->discount;
-                    @endphp
-                    <td class="text-right" width="70">{{ number_format($payable, 2, '.', ',') }}</td>
-                </tr>
-            </tbody>
-        </table>
-        <table class="table mb-0 info-table align-middle" style="border: 2px solid black;margin-top:10px;">
-            <tbody>
-                 <tr>
-                    <td class="text-left" colspan="6"><b>Note :</b> {{ $data->note }}</td>
-                </tr>
-            </tbody>
-        </table>
+</head>
+<body>
+
+<div class="quotation-page">
+
+    {{-- ===== Header: Logo (left) + Company info (right) ===== --}}
+    <div class="q-header">
+        <div class="q-logo">
+            @if (!empty($data->company_logo))
+                <img src="{{ asset($data->company_logo) }}" alt="{{ $data->company_name }}">
+            @else
+                <span class="logo-text">{{ $data->company_name }}</span>
+            @endif
+        </div>
+
+        <div class="q-company">
+            <h2>{{ $data->company_name }}</h2>
+            @if (!empty($data->company_address))
+                <p>{{ $data->company_address }}</p>
+            @endif
+            @if (!empty($data->company_phone))
+                <p>Phone: {{ $data->company_phone }}</p>
+            @endif
+            @if (!empty($data->company_email))
+                <p>Email: {{ $data->company_email }}</p>
+            @endif
+        </div>
     </div>
 
-    <footer class="print-footer">
-        <div>
-            <table class="table mb-0 border-0">
-                <tbody>
-                    <tr>
-                        <td style="border: none;" width="33%">
-                            <div class="signature-item">
-                                <i class="staff">{{ auth()->user()->name }}</i>
-                                <span>Prepared By</span>
-                            </div>
-                        </td>
-                        <td style="border: none;">
-                            <div class="signature-item">
-                                <i class="staff">{{ @$data->staff->name }}</i>
-                                <span>Approved By</span>
-                            </div>
-                        </td>
-                        <td style="border: none;" width="33%">
-                            <div class="signature-item">
-                                <span>Receive By</span>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    {{-- ===== Title ===== --}}
+    <div class="q-title-wrap">
+        <span class="q-title">QUOTATION</span>
+    </div>
+
+    {{-- ===== Info ===== --}}
+    <div class="q-info">
+        <div class="q-box">
+            <div class="q-box-head">Quotation To</div>
+            <div class="q-box-body">
+                <div class="q-row">
+                    <span class="label">Party Name</span>
+                    <span class="value">{{ $data->name }}</span>
+                </div>
+                @if (!empty($data->project_name))
+                    <div class="q-row">
+                        <span class="label">Project</span>
+                        <span class="value">{{ $data->project_name }}</span>
+                    </div>
+                @endif
+            </div>
         </div>
+
+        <div class="q-box">
+            <div class="q-box-head">Quotation Details</div>
+            <div class="q-box-body">
+                <div class="q-row">
+                    <span class="label">Quotation No</span>
+                    <span class="value">{{ $data->quotation }}</span>
+                </div>
+                <div class="q-row">
+                    <span class="label">Date</span>
+                    <span class="value">{{ date('d M, Y', strtotime($data->date)) }}</span>
+                </div>
+                <div class="q-row">
+                    <span class="label">Staff</span>
+                    <span class="value">{{ $data->staff_name }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== Items ===== --}}
+    <table class="q-table">
+        <thead>
+            <tr>
+                <th class="text-center" width="40">SL#</th>
+                <th width="110">Code</th>
+                <th>Product Name</th>
+                <th class="text-center" width="70">Qty</th>
+                <th class="text-right" width="90">Rate</th>
+                <th class="text-right" width="110">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($quotation_details as $item)
+                <tr>
+                    <td class="text-center">{{ $loop->iteration }}</td>
+                    <td>{{ $item->code }}</td>
+                    <td>{{ $item->name }}</td>
+                    <td class="text-center">{{ rtrim(rtrim(number_format($item->qty, 2, '.', ''), '0'), '.') }}</td>
+                    <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->rate * $item->qty, 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    {{-- ===== Totals ===== --}}
+    <div class="q-bottom">
+        <div class="q-words">
+            <div class="label">In Words</div>
+            <div><b>{{ \App\HelperClass::convertNumber($netAmount) }} Taka Only</b></div>
+        </div>
+
+        <div class="q-totals">
+            <div class="t-row">
+                <span>Total Amount</span>
+                <span>{{ number_format($data->total_amount, 2) }}</span>
+            </div>
+
+            @if ($data->discount > 0)
+                <div class="t-row">
+                    <span>Discount</span>
+                    <span>- {{ number_format($data->discount, 2) }}</span>
+                </div>
+            @endif
+
+            @if (($data->tax_amount ?? 0) > 0)
+                <div class="t-row">
+                    <span>VAT & Tax ({{ $taxPct }}%)</span>
+                    <span>{{ number_format($data->tax_amount, 2) }}</span>
+                </div>
+            @endif
+
+            <div class="t-row net">
+                <span>Net Payable</span>
+                <span>{{ number_format($netAmount, 2) }} TK.</span>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== Note ===== --}}
+    @if (!empty($data->note))
+        <div class="q-note">
+            <b>Note :</b> {!! nl2br(e($data->note)) !!}
+        </div>
+    @endif
+
+    {{-- ===== Signature / Footer ===== --}}
+    <div class="q-footer">
+        <div class="q-sign">
+            <div class="sign-item">
+                <i class="staff">{{ $data->created_by_name }}</i>
+                <span>Prepared By</span>
+            </div>
+            <div class="sign-item">
+                <i class="staff">{{ $data->staff_name }}</i>
+                <span>Approved By</span>
+            </div>
+            <div class="sign-item">
+                <span>Received By</span>
+            </div>
+        </div>
+
         @isset($hotline)
-            <h4 class="report-title mb-2" style="background-color: #ddd;">HOTLINE - {{ $hotline }}</h4>
+            <div class="q-hotline">HOTLINE - {{ $hotline }}</div>
         @endisset
-        <div>Software Designed & Developed by Technopark Bangladesh (visit :
-            wwww.technoparkbd.com)</div>
-    </footer>
-@endsection
+
+        <div class="q-credit">
+            Software Designed & Developed by Technopark Bangladesh (visit : www.technoparkbd.com)
+        </div>
+    </div>
+
+</div>
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+
+</body>
+</html>
