@@ -26,9 +26,10 @@ class VoucherRejectController extends Controller
                     voucher_no,
                     voucher_type,
                     MAX(voucher_date) as voucher_date,
-                    SUM(debit_amount) as amount
+                    SUM(debit_amount) as debit_amount,
+                    SUM(credit_amount) as credit_amount
                 ')
-                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV'])
+                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV', 'Salary'])
                 ->where('approve', 1)
                 ->groupBy('company_id', 'voucher_type', 'voucher_no')
                 ->orderByRaw('MAX(id) DESC');

@@ -16,7 +16,8 @@
                     <th>Voucher No</th>
                     <th>Debit Head</th>
                     <th>Credit Head</th>
-                    <th>Amount</th>
+                     <th>Debit Amount</th>
+                    <th>Credit Amount</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -88,8 +89,14 @@
                         searchable: false,
                     },
                     {
-                        data: 'amount',
-                        name: 'amount',
+                        data: 'debit_amount',
+                        name: 'debit_amount',
+                        orderable: false,
+                        searchable: false,
+                    },
+                    {
+                        data: 'credit_amount',
+                        name: 'credit_amount',
                         orderable: false,
                         searchable: false,
                     },
