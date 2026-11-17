@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use Carbon\Carbon;
 use App\Models\Area;
+use App\Models\Branch;
+
 use App\Models\User;
 use App\Models\Group;
 use App\Models\Order;
@@ -2926,107 +2928,201 @@ class ReportController extends Controller
         return view('admin.reports.general_ledger.index', compact('title', 'filter_link', 'coas', 'coa_head_code', 'start_date', 'end_date', 'previousBalance', 'data'));
     }
 
-    public function incomeStatement(Request $request)
-    {
-        $date_range = explode('to', $request->date_range);
-        $start_date = !is_null($request->date_range) ? date('Y-m-d', strtotime($date_range[0])) : date('Y-m-d');
-        $end_date = !is_null($request->date_range) ? date('Y-m-d', strtotime($date_range[1])) : date('Y-m-d');
+   
 
-        $opening_balance = 0;
-        $closing_balance = 0;
-        $incomes = array();
-        $expenses = array();
-        if ($request->has('filter')) {
-            $query = DB::table('view_liftings');
-            $company_id = Auth::user()->company_id;
-            if ($company_id) {
-                $query->where('company_id', $company_id);
-            }
-            $store_id = Store::where('status', 1)->get(['id'])->pluck('id')->toArray();
-            $product_prices = $query->whereIn('store_id', $store_id)->whereNotNull('date')->groupBy('product_id')->orderBy('name', 'asc')->get(['product_id', 'name', 'code', 'attribute_name', 'category_name', 'sale_price']);
-            $product_ids = $product_prices->pluck('product_id')->toArray();
+public function incomeStatement(Request $request)
+{
+    $opening_balance = 0;
+    $closing_balance = 0;
 
-            $liftings = DB::table('view_liftings')->whereIn('store_id', $store_id)->whereNotNull('date')->whereIn('product_id', $product_ids)->orderBy('name', 'asc')->get();
-            $lifting_returns = DB::table('view_lifting_returns')->whereNotNull('date')->whereIn('product_id', $product_ids)->whereIn('store_id', $store_id)->get();
-            $sales = DB::table('view_sales')->whereNotNull('date')->whereIn('product_id', $product_ids)->whereIn('store_id', $store_id)->get();
-            $sales_returns = DB::table('view_sales_returns')->whereNotNull('date')->whereIn('product_id', $product_ids)->whereIn('store_id', $store_id)->get();
-            $online_sales = DB::table('view_online_sales')->where('product_type', $request->product_type ?? 'Consumer')->whereIn('status', ['On Route', 'Delivered', 'Collected'])->whereIn('store_id', $store_id)->whereIn('product_id', $product_ids)->get();
+    // Ei voucher type Income, baki sob Expense
+    $incomeVoucherType = 'Collection';
 
-            $data = [
-                'product_prices' => $product_prices,
-                'store_id' => $store_id,
-                'liftings' => $liftings,
-                'lifting_returns' => $lifting_returns,
-                'sales' => $sales,
-                'sales_returns' => $sales_returns,
-                'online_sales' => $online_sales,
-            ];
+    // ---------------- Date Range (d-m-Y to d-m-Y) ----------------
+    $dateRange = explode(' to ', $request->date_range ?? '');
 
-            foreach ($data['product_prices'] as $key => $row) {
-                $liftings = $data['liftings']->where('product_id', $row->product_id)->sum('qty');
-                $lifting_amount = $data['liftings']->where('product_id', $row->product_id)->sum('amount');
-                $avarage_lifting_price = $lifting_amount / $liftings;
-
-                $opening_liftings = $data['liftings']->where('product_id', $row->product_id)->where('date', '<', $start_date)->sum('qty');
-                $opening_lifting_returns = $data['lifting_returns']->where('product_id', $row->product_id)->where('date', '<', $start_date)->sum('qty');
-                $opening_sales = $data['sales']->where('product_id', $row->product_id)->where('date', '<', $start_date)->sum('qty');
-                $opening_sales_returns = $data['sales_returns']->where('product_id', $row->product_id)->where('date', '<', $start_date)->sum('qty');
-                $opening_online_sales = $data['online_sales']->where('product_id', $row->product_id)->where('date', '<', $start_date)->sum('qty');
-                $opening = $opening_liftings + $opening_sales_returns - $opening_lifting_returns - $opening_sales - $opening_online_sales;
-
-                $closing_liftings = $data['liftings']->where('product_id', $row->product_id)->where('date', '<=', $end_date)->sum('qty');
-                $closing_lifting_returns = $data['lifting_returns']->where('product_id', $row->product_id)->where('date', '<=', $end_date)->sum('qty');
-                $closing_sales = $data['sales']->where('product_id', $row->product_id)->where('date', '<=', $end_date)->sum('qty');
-                $closing_sales_returns = $data['sales_returns']->where('product_id', $row->product_id)->where('date', '<=', $end_date)->sum('qty');
-                $closing_online_sales = $data['online_sales']->where('product_id', $row->product_id)->where('date', '<=', $end_date)->sum('qty');
-                $balance = $closing_liftings + $closing_sales_returns - $closing_lifting_returns - $closing_sales - $closing_online_sales;
-
-                $opening_balance += $opening * $avarage_lifting_price;
-                $closing_balance += $balance * $avarage_lifting_price;
-            }
-
-            $incomes = AccountTransaction::with('coa')
-                ->where('voucher_date', '>=', $start_date)
-                ->where('voucher_date', '<=', $end_date)
-                ->whereHas('coa', function ($query) {
-                    $query->where('head_type', 'I');
-                })
-                ->groupBy('coa_setup_id')
-                ->select('coa_head_code', 'coa_setup_id', DB::raw('SUM(debit_amount) as debit_amount'), DB::raw('SUM(credit_amount) as credit_amount'))
-                ->get();
-
-            $expenses = AccountTransaction::with('coa')->select('*', DB::raw('SUM(debit_amount - credit_amount) as amount'))
-                ->where('voucher_date', '>=', $start_date)
-                ->where('voucher_date', '<=', $end_date)
-                ->whereHas('coa', function ($query) {
-                    $query->where('head_type', 'E')->where('transaction', 1);
-                })
-                ->groupBy('coa_setup_id')
-                ->get();
+    $parseDate = function ($value, $default) {
+        if (empty($value)) {
+            return $default;
         }
 
-        if (!is_null($request->print)) {
-            if (Auth::user()->company_id) {
-                $company = Company::find(Auth::user()->company_id);
-                $title = $company->name;
-                $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
-            } else {
-                $title = 'Company Name Goes Here.';
-                $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
-            }
-
-            $report_title = 'Income Statement Report <br> <span class="text-sm">' . date('d-m-Y', strtotime($start_date)) . ' To ' . date('d-m-Y', strtotime($end_date)) . '</span>';
-            // return view('admin.reports.income_statement.print', compact('title', 'informations', 'report_title', 'opening_balance', 'closing_balance', 'incomes', 'expenses'));
-            $pdf = Pdf::loadView('admin.reports.income_statement.print', compact('title', 'informations', 'report_title', 'opening_balance', 'closing_balance', 'incomes', 'expenses'));
-            $pdf->setPaper('A4', 'landscape');
-            return $pdf->stream('income_statement_' . date('d_m_Y_h_i_s') . '.pdf');
+        try {
+            return Carbon::createFromFormat('d-m-Y', trim($value))->format('Y-m-d');
+        } catch (\Exception $e) {
+            $time = strtotime($value);
+            return $time ? date('Y-m-d', $time) : $default;
         }
+    };
 
-        $title = 'Income Statement';
-        $filter_link = Route('admin.income-statement.index');
-        $print_buttons = '<button type="button" class="btn btn-sm btn-primary text-uppercase getPdf">Print</button>';
-        return view('admin.reports.income_statement.index', compact('title', 'filter_link', 'start_date', 'end_date', 'opening_balance', 'closing_balance', 'incomes', 'expenses', 'print_buttons'));
+    $start_date = $parseDate($dateRange[0] ?? null, date('Y-m-01'));
+    $end_date   = $parseDate($dateRange[1] ?? null, date('Y-m-d'));
+
+    // ---------------- Filter Dropdown Data ----------------
+    $companies = Company::orderBy('name')->get();
+
+    $projects = Branch::query()
+        ->when($request->company_id, function ($q) use ($request) {
+            $q->where('company_id', $request->company_id);
+        })
+        ->orderBy('name')
+        ->get();
+
+    // Ekhon head_type I/E dorkar nai, shob transaction head dekhabe
+    $coa_heads = CoaSetup::where('transaction', 1)
+        ->orderBy('head_code')
+        ->get();
+
+    $voucher_types = AccountTransaction::whereNotNull('voucher_type')
+        ->distinct()
+        ->orderBy('voucher_type')
+        ->pluck('voucher_type');
+
+    // ---------------- Defaults ----------------
+    $incomes  = collect();
+    $expenses = collect();
+
+    $totalIncome  = 0;
+    $totalExpense = 0;
+    $netProfit    = 0;
+
+    // ---------------- Report Data ----------------
+    if ($request->has('filter')) {
+
+        // Common filters (voucher type chhara)
+        $baseQuery = function () use ($request, $start_date, $end_date) {
+
+            return AccountTransaction::query()
+                ->leftJoin('coa_setups', 'coa_setups.id', '=', 'account_transactions.coa_setup_id')
+                ->whereNull('account_transactions.deleted_at')
+                ->whereBetween('account_transactions.voucher_date', [$start_date, $end_date])
+
+                ->when($request->company_id, function ($q) use ($request) {
+                    $q->where('account_transactions.company_id', $request->company_id);
+                })
+                ->when($request->project_id, function ($q) use ($request) {
+                    $q->where('account_transactions.branch_id', $request->project_id);
+                })
+                ->when($request->coa_setup_id, function ($q) use ($request) {
+                    $q->where('account_transactions.coa_setup_id', $request->coa_setup_id);
+                })
+                ->when($request->voucher_type, function ($q) use ($request) {
+                    $q->where('account_transactions.voucher_type', $request->voucher_type);
+                });
+
+            // Optional: shudhu posted / approved
+            // ->where('account_transactions.posted', 1)
+            // ->where('account_transactions.approve', 1);
+        };
+
+        // ---------------- Income: voucher_type = Collection (credit - debit) ----------------
+        $incomes = $baseQuery()
+            ->where('account_transactions.voucher_type', $incomeVoucherType)
+            ->select(
+                'account_transactions.coa_setup_id',
+                'coa_setups.head_code',
+                'coa_setups.head_name',
+                DB::raw('SUM(account_transactions.debit_amount) as debit_amount'),
+                DB::raw('SUM(account_transactions.credit_amount) as credit_amount'),
+                DB::raw('SUM(account_transactions.credit_amount - account_transactions.debit_amount) as amount')
+            )
+            ->groupBy('account_transactions.coa_setup_id', 'coa_setups.head_code', 'coa_setups.head_name')
+            ->orderBy('coa_setups.head_code')
+            ->get();
+
+        // ---------------- Expense: baki sob voucher type (debit - credit) ----------------
+        $expenses = $baseQuery()
+            ->where('account_transactions.voucher_type', '!=', $incomeVoucherType)
+            ->select(
+                'account_transactions.coa_setup_id',
+                'coa_setups.head_code',
+                'coa_setups.head_name',
+                DB::raw('SUM(account_transactions.debit_amount) as debit_amount'),
+                DB::raw('SUM(account_transactions.credit_amount) as credit_amount'),
+                DB::raw('SUM(account_transactions.debit_amount - account_transactions.credit_amount) as amount')
+            )
+            ->groupBy('account_transactions.coa_setup_id', 'coa_setups.head_code', 'coa_setups.head_name')
+            ->orderBy('coa_setups.head_code')
+            ->get();
+
+        $totalIncome  = $incomes->sum('amount');
+        $totalExpense = $expenses->sum('amount');
+        $netProfit    = $totalIncome - $totalExpense;
     }
+
+    // ---------------- Company Information ----------------
+    $company = $request->company_id
+        ? Company::find($request->company_id)
+        : (Auth::user()->company_id
+            ? Company::find(Auth::user()->company_id)
+            : null);
+
+    $title = $company->name ?? 'Income Statement';
+
+    $informations = $company
+        ? $company->address . '<br>' . $company->phone . ', ' .
+          $company->email . ', ' . $company->website
+        : '';
+
+    $report_title = 'Income Statement Report<br>
+        <span class="text-sm">' .
+        date('d-m-Y', strtotime($start_date)) .
+        ' To ' .
+        date('d-m-Y', strtotime($end_date)) .
+        '</span>';
+
+    // ---------------- PDF Print ----------------
+    if ($request->print == 'true') {
+
+        $pdf = Pdf::loadView(
+            'admin.reports.income_statement.print',
+            compact(
+                'title',
+                'informations',
+                'report_title',
+                'incomes',
+                'expenses',
+                'totalIncome',
+                'totalExpense',
+                'netProfit'
+            )
+        );
+
+        $pdf->setPaper('A4', 'landscape');
+
+        return $pdf->stream('income_statement_' . date('d_m_Y_H_i_s') . '.pdf');
+    }
+
+    // ---------------- View ----------------
+    $filter_link = route('admin.income-statement.index');
+
+    $print_buttons = '
+        <button type="button" class="btn btn-sm btn-primary getPdf">
+            <i class="fas fa-print"></i> Print
+        </button>
+    ';
+
+    return view(
+        'admin.reports.income_statement.index',
+        compact(
+            'title',
+            'filter_link',
+            'start_date',
+            'end_date',
+            'companies',
+            'projects',
+            'coa_heads',
+            'voucher_types',
+            'incomes',
+            'expenses',
+            'totalIncome',
+            'totalExpense',
+            'netProfit',
+            'print_buttons',
+            'opening_balance',
+            'closing_balance'
+        )
+    );
+}
 
     public function trialBalance(Request $request)
     {
