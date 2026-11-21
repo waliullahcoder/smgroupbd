@@ -4485,43 +4485,57 @@ public function incomeStatement(Request $request)
         return view('admin.reports.monthly_chart.index', compact('title', 'filter_form'));
     }
 
+
 public function employeeStatement(Request $request)
 {
     // Default Date
     $start_date = date('Y-m-d');
-    $end_date = date('Y-m-d');
+    $end_date   = date('Y-m-d');
 
-   $employees = Staff::select('id','code','name')
-    ->orderBy('id', 'desc')
-    ->get();
-   $payroll_no = DB::table('hrm_employee_payrolls')
-    ->where('employee_id', $request->employee_id)
-    ->pluck('payroll_no')
-    ->toArray();
-
-    $loan_no = DB::table('hrm_employee_loan')
-        ->where('employee_id', $request->employee_id)
-        ->pluck('loan_no')
-        ->toArray();
-
-    // Merge both numbers
-    $payment_no = array_merge($payroll_no, $loan_no);
+    // Employee List
+    $employees = Staff::select('id', 'code', 'name')
+        ->orderBy('id', 'desc')
+        ->get();
 
     // Date Range Filter
     if ($request->filled('date_range')) {
+        $date_range = explode(' to ', $request->date_range);
 
-        $date_range = explode('to', $request->date_range);
+        if (!empty($date_range[0])) {
+            $start_date = date('Y-m-d', strtotime(trim($date_range[0])));
+        }
 
-        $start_date = date('Y-m-d', strtotime(trim($date_range[0])));
+        if (!empty($date_range[1])) {
+            $end_date = date('Y-m-d', strtotime(trim($date_range[1])));
+        } else {
+            $end_date = $start_date;
+        }
+    }
 
-        $end_date = isset($date_range[1])
-            ? date('Y-m-d', strtotime(trim($date_range[1])))
-            : $start_date;
+    // Employee Voucher Numbers
+    $payment_no = [];
+
+    if ($request->filled('employee_id')) {
+
+        // Payroll Voucher Numbers
+        $payroll_no = DB::table('hrm_employee_payrolls')
+            ->where('employee_id', $request->employee_id)
+            ->pluck('payroll_no')
+            ->toArray();
+
+        // Loan Voucher Numbers
+        $loan_no = DB::table('hrm_employee_loan')
+            ->where('employee_id', $request->employee_id)
+            ->pluck('loan_no')
+            ->toArray();
+
+        // Merge Payroll and Loan Voucher Numbers
+        $payment_no = array_unique(array_merge($payroll_no, $loan_no));
     }
 
     // Transaction Query
     $query = AccountTransaction::with('coa')
-        ->whereIn('voucher_type',['Salary','Loan','Installment'])
+        ->whereIn('voucher_type', ['Salary', 'Loan', 'Installment'])
         ->whereDate('voucher_date', '>=', $start_date)
         ->whereDate('voucher_date', '<=', $end_date);
 
@@ -4529,9 +4543,16 @@ public function employeeStatement(Request $request)
     if ($request->filled('coa_setup_id')) {
         $query->where('coa_setup_id', $request->coa_setup_id);
     }
+
     // Employee Filter
-    if ($request->filled('employee_id') && $payment_no) {
-        $query->whereIn('voucher_no', $payment_no);
+    if ($request->filled('employee_id')) {
+
+        if (!empty($payment_no)) {
+            $query->whereIn('voucher_no', $payment_no);
+        } else {
+            // Selected employee has no voucher
+            $query->whereRaw('1 = 0');
+        }
     }
 
     // Transaction Data
@@ -4542,43 +4563,50 @@ public function employeeStatement(Request $request)
             DB::raw('SUM(debit_amount) as debit_amount'),
             DB::raw('SUM(credit_amount) as credit_amount')
         )
-        ->groupBy('narration','voucher_date')
-        ->orderBy('voucher_date','desc')
+        ->groupBy('narration', 'voucher_date')
+        ->orderBy('voucher_date', 'desc')
         ->get();
 
-        
+    // Total Amount
+    $debit_amount  = $data->sum('debit_amount');
     $credit_amount = $data->sum('credit_amount');
-    $debit_amount = $data->sum('debit_amount');
 
     // Excel Export
     if ($request->filled('export')) {
-        return response()->streamDownload(function () use ($data, $credit_amount, $debit_amount) {
+
+        return response()->streamDownload(function () use (
+            $data,
+            $credit_amount,
+            $debit_amount
+        ) {
 
             $file = fopen('php://output', 'w');
 
+            // UTF-8 BOM for Bangla/Excel
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             fputcsv($file, [
                 'SL',
                 'Transaction Date',
                 'Head Name',
-                'debit_amount',
-                'credit_amount'
+                'Debit Amount',
+                'Credit Amount'
             ]);
 
             foreach ($data as $key => $row) {
-
                 fputcsv($file, [
                     $key + 1,
                     $row->voucher_date ?? '',
                     $row->narration ?? '',
-                    $row->debit_amount,
-                    $row->credit_amount
+                    $row->debit_amount ?? 0,
+                    $row->credit_amount ?? 0
                 ]);
             }
 
+            // Empty Row
             fputcsv($file, []);
 
+            // Total
             fputcsv($file, [
                 '',
                 '',
@@ -4589,14 +4617,17 @@ public function employeeStatement(Request $request)
 
             fclose($file);
 
-        }, 'employee_statement_' . date('d_m_Y_H_i_s') . '.csv');
+        }, 'employee_statement_' . date('d_m_Y_H_i_s') . '.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
-    
+    // COA Heads
     $heads = CoaSetup::orderBy('head_code')->get();
 
     $title = 'Employee Statement Report';
 
+    // Buttons
     $buttons = '
         <button type="button" class="btn btn-sm btn-success" id="export_excel">
             <i class="fas fa-file-excel"></i> Excel
@@ -4625,6 +4656,7 @@ public function employeeStatement(Request $request)
         )
     );
 }
+
 
 
 public function receivePayment(Request $request)
