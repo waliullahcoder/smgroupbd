@@ -2,14 +2,8 @@
 
 @section('form')
     <div class="row g-3">
-        <div class="col-md-4 col-sm-6">
-            <label for="report_type" class="form-label"><b>Report Type</b></label>
-            <select name="report_type" id="report_type" class="form-select select" data-placeholder="Report Type">
-                <option value="history" {{ $report_type == 'history' ? 'selected' : '' }}>History</option>
-                <option value="summary" {{ $report_type == 'summary' ? 'selected' : '' }}>Summary</option>
-            </select>
-        </div>
-        <div class="col-md-4 col-sm-6">
+        
+        <div class="col-md-6 col-sm-6">
             <label for="vendor_id" class="form-label"><b>Vendor</b></label>
             <select name="vendor_id[]" id="vendor_id" class="form-select select" data-placeholder="Select Vendor" multiple>
                 <option value=""></option>
@@ -21,7 +15,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-6 col-sm-6">
             <label for="date_range" class="form-label"><b>Date</b></label>
             <input type="text" class="form-control date-range" name="date_range" id="date_range"
                 placeholder="Select Date Range" data-time-picker="true" data-format="DD-MM-Y"

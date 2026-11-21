@@ -92,13 +92,13 @@
             $('#dataTable').DataTable({
                 "order": false,
                 dom: 'Bfrtip',
-                buttons: [
-                    'excelHtml5',
-                    {
-                        'text': '<i class="fal fa-file-pdf"></i> Print',
-                        'className': 'getPdf',
-                    },
-                ]
+                // buttons: [
+                //     'excelHtml5',
+                //     {
+                //         'text': '<i class="fal fa-file-pdf"></i> Print',
+                //         'className': 'getPdf',
+                //     },
+                // ]
             });
 
             $(document).on('click', '.getPdf', function(e) {

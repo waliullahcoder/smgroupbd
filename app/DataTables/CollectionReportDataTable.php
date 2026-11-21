@@ -13,34 +13,53 @@ use Yajra\DataTables\Services\DataTable;
 class CollectionReportDataTable extends DataTable
 {
     /**
-     * Build the DataTable class.
-     *
-     * @param QueryBuilder $query Results from query() method.
+     * Build DataTable.
      */
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+
             ->addColumn('date', function ($row) {
-                return date('d-m-Y', strtotime($row->collected_at));
+                return $row->collected_at
+                    ? date('d-m-Y', strtotime($row->collected_at))
+                    : '';
             })
+
             ->setRowId('id');
     }
 
     /**
-     * Get the query source of dataTable.
+     * Get query source.
      */
     public function query(Order $model): QueryBuilder
     {
-        $start_date = !is_null(request('start_date')) ? date('Y-m-d', strtotime(request('start_date'))) : date('Y-m-d');
-        $end_date = !is_null(request('end_date')) ? date('Y-m-d', strtotime(request('end_date'))) : date('Y-m-d');
-        $query = $model->with('store')->where('collected_at', '>=', $start_date)->where('collected_at', '<=', $end_date);
-        if (request('delivery_man_id')) $query->where('delivery_man_id', request('delivery_man_id'));
-        if (request('store_id')) $query->where('store_id', request('store_id'));
-        return $query->where('collected', 1);
+        $start_date = request('start_date')
+            ? date('Y-m-d', strtotime(request('start_date')))
+            : date('Y-m-d');
+
+        $end_date = request('end_date')
+            ? date('Y-m-d', strtotime(request('end_date')))
+            : date('Y-m-d');
+
+        $query = $model->newQuery()
+            ->with('store')
+            ->whereDate('collected_at', '>=', $start_date)
+            ->whereDate('collected_at', '<=', $end_date)
+            ->where('collected', 1);
+
+        if (request()->filled('delivery_man_id')) {
+            $query->where('delivery_man_id', request('delivery_man_id'));
+        }
+
+        if (request()->filled('store_id')) {
+            $query->where('store_id', request('store_id'));
+        }
+
+        return $query->orderBy('collected_at', 'desc');
     }
 
     /**
-     * Optional method if you want to use the html builder.
+     * HTML Builder.
      */
     public function html(): HtmlBuilder
     {
@@ -51,109 +70,139 @@ class CollectionReportDataTable extends DataTable
             ->dom('Bfrtip')
             ->selectStyleSingle()
             ->parameters([
-                'buttons'      => [
+
+                'buttons' => [
+
                     Button::make('reload'),
+
                     [
-                        'extend'  => 'excel',
-                        'text'    => '<i class="fal fa-file-spreadsheet"></i> Exel',
+                        'extend' => 'excel',
+                        'text' => '<i class="fal fa-file-spreadsheet"></i> Excel',
+                        'footer' => true,
                     ],
+
                     [
-                        'text'    => '<i class="fal fa-file-pdf"></i> Print',
+                        'text' => '<i class="fal fa-file-pdf"></i> Print',
                         'className' => 'getPdf',
                     ],
+
                 ],
+
                 'responsive' => true,
+
+                'processing' => true,
+
+                'serverSide' => true,
+
                 'drawCallback' => 'function() {
-                    let data = this.api().ajax.json().data;
-                    var total_subtotal = 0;
-                    var total_discount = 0;
-                    var total_shipping = 0;
-                    var total = 0;
-                    data.forEach(function(item, index){
-                        total_subtotal += +item.sub_total;
-                        total_discount += +item.discount;
-                        total_shipping += +item.shipping_charge;
-                        total += +item.due;
+
+                    let api = this.api();
+
+                    let total_subtotal = 0;
+                    let total_discount = 0;
+                    let total_shipping = 0;
+                    let total = 0;
+
+                    api.rows({ search: "applied" }).data().each(function(item) {
+
+                        total_subtotal += parseFloat(item.sub_total) || 0;
+                        total_discount += parseFloat(item.discount) || 0;
+                        total_shipping += parseFloat(item.shipping_charge) || 0;
+                        total += parseFloat(item.due) || 0;
+
                     });
-                    $("#total_subtotal").html(total_subtotal);
-                    $("#total_discount").html(total_discount);
-                    $("#total_shipping").html(total_shipping);
-                    $("#total").html(total);
-                 }',
+
+                    $("#total_subtotal").html(total_subtotal.toFixed(2));
+                    $("#total_discount").html(total_discount.toFixed(2));
+                    $("#total_shipping").html(total_shipping.toFixed(2));
+                    $("#total").html(total.toFixed(2));
+
+                }',
+
             ]);
     }
 
     /**
-     * Get the dataTable columns definition.
+     * Columns.
      */
     public function getColumns(): array
     {
         return [
+
             Column::make([
-                'data'      => 'date',
-                'name'      => 'date',
-                'title'     => 'Collection Date',
+                'data' => 'date',
+                'name' => 'collected_at',
+                'title' => 'Collection Date',
                 'orderable' => false,
                 'searchable' => false,
             ]),
+
             Column::make([
-                'data'      => 'invoice',
-                'name'      => 'invoice',
-                'title'     => 'Invoice',
-                'class'     => 'text-nowrap',
+                'data' => 'invoice',
+                'name' => 'invoice',
+                'title' => 'Invoice',
+                'class' => 'text-nowrap',
             ]),
+
             Column::make([
-                'data'      => 'user_name',
-                'name'      => 'user_name',
-                'title'     => 'Customer Name',
-                'class'     => 'text-nowrap',
+                'data' => 'user_name',
+                'name' => 'user_name',
+                'title' => 'Customer Name',
+                'class' => 'text-nowrap',
             ]),
+
             Column::make([
-                'data'      => 'user_phone',
-                'name'      => 'user_phone',
-                'title'     => 'Phone',
-                'class'     => 'text-nowrap',
+                'data' => 'user_phone',
+                'name' => 'user_phone',
+                'title' => 'Phone',
+                'class' => 'text-nowrap',
             ]),
+
             Column::make([
-                'data'      => 'store.name',
-                'name'      => 'store.name',
-                'title'     => 'Store',
-                'class'     => 'text-nowrap',
-                'defaultContent'     => '',
+                'data' => 'store.name',
+                'name' => 'store.name',
+                'title' => 'Store',
+                'class' => 'text-nowrap',
+                'defaultContent' => '',
             ]),
+
             Column::make([
-                'data'      => 'sub_total',
-                'name'      => 'sub_total',
-                'title'     => 'Product Amount',
-                'class'     => 'text-center',
-                'footer'    => '<span id="total_subtotal"></span>',
+                'data' => 'sub_total',
+                'name' => 'sub_total',
+                'title' => 'Product Amount',
+                'class' => 'text-center',
+                'footer' => '<span id="total_subtotal">0.00</span>',
             ]),
+
             Column::make([
-                'data'      => 'discount',
-                'name'      => 'discount',
-                'title'     => 'Discount',
-                'class'     => 'text-center',
-                'footer'    => '<span id="total_discount"></span>',
+                'data' => 'discount',
+                'name' => 'discount',
+                'title' => 'Discount',
+                'class' => 'text-center',
+                'footer' => '<span id="total_discount">0.00</span>',
             ]),
+
             Column::make([
-                'data'      => 'shipping_charge',
-                'name'      => 'shipping_charge',
-                'title'     => 'Shipping Charge',
-                'class'     => 'text-center',
-                'footer'    => '<span id="total_shipping"></span>',
+                'data' => 'shipping_charge',
+                'name' => 'shipping_charge',
+                'title' => 'Shipping Charge',
+                'class' => 'text-center',
+                'footer' => '<span id="total_shipping">0.00</span>',
             ]),
+
             Column::make([
-                'data'      => 'due',
-                'name'      => 'due',
-                'title'     => 'Total Amount',
-                'class'     => 'text-center',
-                'footer'    => '<span id="total"></span>',
+                'data' => 'due',
+                'name' => 'due',
+                'title' => 'Total Amount',
+                'class' => 'text-center',
+                'footer' => '<span id="total">0.00</span>',
             ]),
+
         ];
     }
 
     /**
-     * Get the filename for export.
+     * Export filename.
      */
     protected function filename(): string
     {

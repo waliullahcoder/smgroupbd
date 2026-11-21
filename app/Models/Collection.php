@@ -16,6 +16,10 @@ class Collection extends Model
     // {
     //     static::addGlobalScope(new CompanyScope);
     // }
+    public function coa()
+    {
+        return $this->belongsTo(CoaSetup::class, 'coa_setup_id');
+    }
 
     public function company()
     {

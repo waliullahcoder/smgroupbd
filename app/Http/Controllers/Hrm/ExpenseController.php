@@ -7,7 +7,6 @@ use App\Models\Branch;
 use App\Models\ClientCategory;
 use App\Models\CoaSetup;
 use App\Models\AccountTransactionAuto;
-use App\Models\coa_setups;
 use App\Models\User;
 use App\Models\Role;
 use App\Http\Controllers\Controller;

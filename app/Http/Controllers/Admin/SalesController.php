@@ -393,63 +393,15 @@ class SalesController extends Controller
                         ]);
                     //}
                 }
-
-                $client = Client::find($request->client_id);
-                if (@$admin_setting->accounting == 1 && $client->coa) {
-                    $income_head = CoaSetup::where('head_type', 'I')->where('head_name', 'Whole Sale')->first();
-                    $headCode = collect([
-                        '0' => $client->coa->head_code,
-                        '1' => $income_head->head_code,
-                    ]);
-
-                    $debit_amount = collect([
-                        '0' => $request->net_amount,
-                        '1' => 0.00
-                    ]);
-
-                    $credit_amount = collect([
-                        '0' => 0.00,
-                        '1' => $request->net_amount,
-                    ]);
-
-                    $countHead = count($headCode);
-                    $postData = [];
-                    for ($i = 0; $i < $countHead; $i++) {
-                        $coa = CoaSetup::where('company_id', (Auth::user()->company_id ?? 1))->where('head_code', $headCode[$i])->first();
-                        $postData[] = [
-                            'company_id' => Auth::user()->company_id ?? 1,
-                            'voucher_no' => $sales->invoice,
-                            'voucher_type' => "Sales",
-                            'voucher_date' => date('Y-m-d', strtotime($request->date)),
-                            'coa_setup_id' => $coa->id,
-                            'coa_head_code' => $headCode[$i],
-                            'narration' => 'Product Sales Against Invoice No - ' . $sales->invoice,
-                            'debit_amount' => $debit_amount[$i],
-                            'credit_amount' => $credit_amount[$i],
-                            'created_by' => Auth::user()->id,
-                            'created_at' => Carbon::now(),
-                            'updated_at' => Carbon::now()
-                        ];
-                    }
-                    AccountTransactionAuto::insert($postData);
-                }
-
-               
-
-                $store = Store::find($request->store_id);
-                $products_info = '';
-                foreach ($request->product_id as $product_id) {
-                    $product = Product::find($product_id);
-                    $products_info .= ' ' . $product->name . ' Quanity : ' . $request->qty[$product_id] . ' ' . $product->attribute->name;
-                }
-              
             });
+              return redirect()->route('admin.sales.index')->withSuccessMessage('Created Successfully!');
+                
         } catch (Throwable $caught) {
             if ($caught) {
                 return redirect()->back()->withErrors($caught->getMessage());
             }
         }
-        return redirect()->route('admin.sales.index')->withSuccessMessage('Created Successfully!');
+       
     }
 
     function singleSms($msisdn, $messageBody, $csmsId)

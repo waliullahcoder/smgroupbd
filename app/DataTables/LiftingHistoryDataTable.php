@@ -154,10 +154,10 @@ class LiftingHistoryDataTable extends DataTable
                         'extend'  => 'excel',
                         'text'    => '<i class="fal fa-file-spreadsheet"></i> Exel',
                     ],
-                    [
-                        'text'    => '<i class="fal fa-file-pdf"></i> Print',
-                        'className' => 'getPdf',
-                    ],
+                    // [
+                    //     'text'    => '<i class="fal fa-file-pdf"></i> Print',
+                    //     'className' => 'getPdf',
+                    // ],
                 ],
                 'responsive' => true,
                 'drawCallback' => 'function() {

@@ -5,7 +5,7 @@
     <input type="hidden" name="filter" value="1">
     <div class="row g-3">
         <div class="col-sm-6">
-            <label for="coa_setup_id" class="form-label"><b>Voucher Account <span class="text-danger">*</span></b></label>
+            <label for="coa_setup_id" class="form-label"><b>Transaction Head <span class="text-danger">*</span></b></label>
             <select name="coa_setup_id" id="coa_setup_id" class="form-select select" data-placeholder="Select Account"
                 required>
                 <option value=""></option>
@@ -89,15 +89,11 @@
 @push('js')
     <script type="text/javascript">
         $(document).ready(function() {
-            $('#dataTable').DataTable({
+           $('#dataTable').DataTable({
                 "order": false,
                 dom: 'lBfrtip',
                 buttons: [
-                    'excelHtml5',
-                    {
-                        'text': '<i class="fal fa-file-pdf"></i> Print',
-                        'className': 'getPdf',
-                    },
+                    'excelHtml5'
                 ]
             });
 

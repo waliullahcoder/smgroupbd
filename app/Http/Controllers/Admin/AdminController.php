@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use DateTime;
 use DatePeriod;
 use DateInterval;
+use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Region;
 use App\Models\Client;
@@ -56,177 +57,59 @@ class AdminController extends Controller
         }
     }
 
-    public function dashboard()
-    {
+public function dashboard()
+{
+    $sales = DB::table('sales')->sum('total_amount');
+
+    $loan          = DB::table('hrm_employee_loan')->sum('loan_amount');
+    $expense       = DB::table('hrm_expense')->sum('expense_amount');
+    $vendorpayment = DB::table('vendor_payments')->sum('amount');
+    $expense_total = $loan + $expense + $vendorpayment;
+
+    $collections      = DB::table('collections')->sum('amount');
+    $installment      = DB::table('hrm_employee_loan')->sum('installment_amount');
+    $total_collection = $collections + $installment;
+
+    $profit_loss = $total_collection - $expense_total;
+
+    // ---------- Chart data (last 12 months) ----------
+    $start = Carbon::now()->subMonths(11)->startOfMonth();
+    $end   = Carbon::now()->endOfMonth();
+
+    // Sales: month wise
+    $salesByMonth = DB::table('sales')
+        ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, SUM(total_amount) as total")
+        ->whereBetween('created_at', [$start, $end])
+        ->groupBy('ym')
+        ->pluck('total', 'ym');
+
+    // Collection: month wise
+    $collectionByMonth = DB::table('collections')
+        ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, SUM(amount) as total")
+        ->whereBetween('created_at', [$start, $end])
+        ->groupBy('ym')
+        ->pluck('total', 'ym');
+
      
-        if (request()->ajax()) {
-            $start = new DateTime('first day of -1 year');
-            $end = new DateTime('first day of next month');
-            $interval = new DateInterval('P1M');
-            $period = new DatePeriod($start, $interval, $end);
 
-            $months = [];
-            $month_sales = [];
-            $month_collections = [];
-            foreach ($period as $dt) {
-                $start_date = $dt->format("Y-m-01");
-                $end_date = $dt->format("Y-m-t");
+    $chartLabels     = [];
+    $chartSales      = [];
+    $chartCollection = [];
 
-                $sales = DB::table('view_sales')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->sum('amount');
-                $salesReturn = DB::table('view_sales_returns')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->sum('amount');
-                $totalSales = $sales - $salesReturn;
-                $collections = DB::table('view_collection_history')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->where('collection_type', '!=', 'adjust')->sum('amount');
+    for ($i = 0; $i < 12; $i++) {
+        $month = $start->copy()->addMonths($i);
+        $key   = $month->format('Y-m');
 
-                $months[] = $dt->format("M-y");
-                $month_sales[] = $totalSales;
-                $month_collections[] = $collections;
-            }
-            $monthlyData = [
-                'month' => $months,
-                'sales_amount' => $month_sales,
-                'collection_amount' => $month_collections,
-            ];
-
-            $start = new DateTime('first day of -2 month');
-            $end = new DateTime('first day of next month');
-            $interval = DateInterval::createFromDateString('7 day');
-            $period   = new DatePeriod($start, $interval, $end);
-
-            $weeks = [];
-            $weekly_sales = [];
-            $weekly_collections = [];
-            foreach ($period as $dt) {
-                $start_date = date('Y-m-d', strtotime('20-12-2023'));
-                $end_date = $dt->format("Y-m-d");
-
-                $sales = DB::table('view_sales')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->sum('amount');
-                $salesReturn = DB::table('view_sales_returns')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->sum('amount');
-                $totalSales = $sales - $salesReturn;
-                $collections = DB::table('view_collection_history')->where('date', '>=', $start_date)->where('date', '<=', $end_date)->where('collection_type', '!=', 'adjust')->sum('amount');
-
-                if ($end_date < date('Y-m-d')) {
-                    $weeks[] = $dt->format("d-M");
-                    $weekly_sales[] = $totalSales;
-                    $weekly_collections[] = $collections;
-                }
-            }
-            $weeklyData = [
-                'weeks' => $weeks,
-                'sales_amount' => $weekly_sales,
-                'collection_amount' => $weekly_collections,
-            ];
-
-            return response()->json(['status' => 'success', 'monthlyData' => $monthlyData, 'weeklyData' => $weeklyData]);
-        }
-
-        $sales = DB::table('view_sales')->sum('amount');
-        $salesReturn = DB::table('view_sales_returns')->sum('amount');
-        $totalSales = $sales - $salesReturn;
-        $collections = DB::table('view_collection_history')->where('collection_type', '!=', 'adjust')->sum('amount');
-        $outstanding = $totalSales - $collections;
-        $total_clients = Client::where('status', 1)->count();
-        $lifting = DB::table('view_liftings')->sum('amount');
-        $liftingReturn = DB::table('view_lifting_returns')->sum('amount');
-        $payment = DB::table('view_payments')->whereNotIn('type', ['adjust', 'return'])->sum('amount');
-        $paymentDue = $lifting - ($liftingReturn + $payment);
-        $stock_value = 0;
-
-        // Get all product_ids involved in lifting
-        $product_ids = DB::table('view_liftings')
-            ->select('product_id')
-            ->distinct()
-            ->pluck('product_id');
-
-        // Preload sums grouped by product_id
-        $liftings = DB::table('view_liftings')
-            ->select('product_id', DB::raw('SUM(qty) as qty'), DB::raw('SUM(amount) as amount'))
-            ->groupBy('product_id')
-            ->get()
-            ->keyBy('product_id');
-
-        $lifting_returns = DB::table('view_lifting_returns')
-            ->select('product_id', DB::raw('SUM(qty) as qty'))
-            ->groupBy('product_id')
-            ->get()
-            ->pluck('qty', 'product_id');
-
-        $sales = DB::table('view_sales')
-            ->select('product_id', DB::raw('SUM(qty) as qty'))
-            ->groupBy('product_id')
-            ->get()
-            ->pluck('qty', 'product_id');
-
-        $sales_returns = DB::table('view_sales_returns')
-            ->select('product_id', DB::raw('SUM(qty) as qty'))
-            ->groupBy('product_id')
-            ->get()
-            ->pluck('qty', 'product_id');
-
-        $retail_sales = DB::table('view_retail_sales')
-            ->select('product_id', DB::raw('SUM(qty) as qty'))
-            ->groupBy('product_id')
-            ->get()
-            ->pluck('qty', 'product_id');
-
-        $online_sales = DB::table('view_online_sales')
-            ->whereNotNull('store_id')
-            ->select('product_id', DB::raw('SUM(qty) as qty'))
-            ->groupBy('product_id')
-            ->get()
-            ->pluck('qty', 'product_id');
-
-        // Process per product
-        foreach ($product_ids as $product_id) {
-            $lifting = $liftings[$product_id] ?? null;
-
-            if (!$lifting || $lifting->qty == 0) {
-                continue; // avoid divide by zero or missing data
-            }
-
-            $avg_price = $lifting->amount / $lifting->qty;
-
-            $lifting_return_qty = $lifting_returns[$product_id] ?? 0;
-            $sales_qty = $sales[$product_id] ?? 0;
-            $sales_return_qty = $sales_returns[$product_id] ?? 0;
-            $retail_sales_qty = $retail_sales[$product_id] ?? 0;
-            $online_sales_qty = $online_sales[$product_id] ?? 0;
-
-            $balance_qty = $lifting->qty + $sales_return_qty - $lifting_return_qty - $sales_qty - $retail_sales_qty - $online_sales_qty;
-            $stock_value += $balance_qty * $avg_price;
-        }
-
-
-        $today_retail_sales = RetailSale::where('date', date('Y-m-d'))->get();
-        $total_products = Product::where('status', true)->count();
-        $info = [
-            'customers' => $today_retail_sales->count(),
-            'total_sales' => $today_retail_sales->sum('receive_amount'),
-            'cash_in' => $today_retail_sales->sum('receive_amount'),
-            'due' => 0,
-            'total_products' => number_format($total_products),
-            'sales' => number_format($totalSales, 2),
-            'collections' => number_format($collections, 2),
-            'outstanding' => number_format($outstanding, 2),
-            'payment_due' => number_format($paymentDue, 2),
-            'stock_value' => number_format($stock_value, 2),
-        ];
-
-        $RegionSales = [];
-        $regions = Region::where('status', 1)->orderBy('name', 'asc')->get();
-        foreach ($regions as $region) {
-            $sales = DB::table('view_sales')->where('region_id', $region->id)->sum('amount');
-            $salesReturn = DB::table('view_sales_returns')->where('region_id', $region->id)->sum('amount');
-            $totalSales = $sales - $salesReturn;
-            $data = [
-                'name' => $region->name,
-                'amount' => $totalSales
-            ];
-            array_push($RegionSales, $data);
-        }
-
-        return view('admin.profile.dashbaord', compact('info', 'RegionSales'));
+        $chartLabels[]     = $month->format('M-y');          // Dec-25
+        $chartSales[]      = (float) ($salesByMonth[$key] ?? 0);
+        $chartCollection[] = (float) ($collectionByMonth[$key] ?? 0);
     }
-
+   //dd($chartSales,$salesByMonth,$collectionByMonth);
+    return view('admin.profile.dashbaord', compact(
+        'sales', 'expense_total', 'total_collection', 'profit_loss',
+        'chartLabels', 'chartSales', 'chartCollection'
+    ));
+}
     /**
      * Manage Sidebar
      */

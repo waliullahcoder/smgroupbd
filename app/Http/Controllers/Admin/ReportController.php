@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use Carbon\Carbon;
 use App\Models\Area;
 use App\Models\Branch;
-
 use App\Models\User;
 use App\Models\Group;
 use App\Models\Order;
@@ -2832,22 +2831,7 @@ class ReportController extends Controller
             }
         }
 
-        if (!is_null($request->print)) {
-            if (Auth::user()->company_id) {
-                $company = Company::find(Auth::user()->company_id);
-                $title = $company->name;
-                $informations = $company->address . '</br>' . $company->phone . ', ' . $company->email . ', ' . $company->website;
-            } else {
-                $title = 'Company Name Goes Here.';
-                $informations = 'Company address will goes here </br> Mobile: 0967XXXXXX, Email: youremail@gmail.com, www.website.com';
-            }
-
-            $report_title = 'Transaction Ledger Report <br> <span class="text-sm">' . date('d-m-Y', strtotime($start_date)) . ' To ' . date('d-m-Y', strtotime($end_date)) . '</span>';
-            // return view('admin.reports.transaction_ledger.print', compact('title', 'informations', 'report_title', 'previousBalance', 'data'));
-            $pdf = Pdf::loadView('admin.reports.transaction_ledger.print', compact('title', 'informations', 'report_title', 'previousBalance', 'data'));
-            $pdf->setPaper('A4', 'landscape');
-            return $pdf->stream('transaction_ledger_' . date('d_m_Y_h_i_s') . '.pdf');
-        }
+       
 
         $title = 'Transaction Ledger';
         $filter_link = Route('admin.transaction-ledger.index');
@@ -2936,7 +2920,7 @@ public function incomeStatement(Request $request)
     $closing_balance = 0;
 
     // Ei voucher type Income, baki sob Expense
-    $incomeVoucherType = 'Collection';
+    $incomeVoucherType = ['Collection','Installment'];
 
     // ---------------- Date Range (d-m-Y to d-m-Y) ----------------
     $dateRange = explode(' to ', $request->date_range ?? '');
@@ -3016,7 +3000,7 @@ public function incomeStatement(Request $request)
 
         // ---------------- Income: voucher_type = Collection (credit - debit) ----------------
         $incomes = $baseQuery()
-            ->where('account_transactions.voucher_type', $incomeVoucherType)
+            ->whereIn('account_transactions.voucher_type', $incomeVoucherType)
             ->select(
                 'account_transactions.coa_setup_id',
                 'coa_setups.head_code',
@@ -3031,7 +3015,7 @@ public function incomeStatement(Request $request)
 
         // ---------------- Expense: baki sob voucher type (debit - credit) ----------------
         $expenses = $baseQuery()
-            ->where('account_transactions.voucher_type', '!=', $incomeVoucherType)
+            ->whereNotIn('account_transactions.voucher_type', $incomeVoucherType)
             ->select(
                 'account_transactions.coa_setup_id',
                 'coa_setups.head_code',
@@ -4501,38 +4485,259 @@ public function incomeStatement(Request $request)
         return view('admin.reports.monthly_chart.index', compact('title', 'filter_form'));
     }
 
-    public function receivePayment(Request $request)
-    {
+public function employeeStatement(Request $request)
+{
+    // Default Date
+    $start_date = date('Y-m-d');
+    $end_date = date('Y-m-d');
+
+   $employees = Staff::select('id','code','name')
+    ->orderBy('id', 'desc')
+    ->get();
+   $payroll_no = DB::table('hrm_employee_payrolls')
+    ->where('employee_id', $request->employee_id)
+    ->pluck('payroll_no')
+    ->toArray();
+
+    $loan_no = DB::table('hrm_employee_loan')
+        ->where('employee_id', $request->employee_id)
+        ->pluck('loan_no')
+        ->toArray();
+
+    // Merge both numbers
+    $payment_no = array_merge($payroll_no, $loan_no);
+
+    // Date Range Filter
+    if ($request->filled('date_range')) {
+
         $date_range = explode('to', $request->date_range);
-        $start_date = !is_null($request->date_range) ? date('Y-m-d', strtotime($date_range[0])) : date('Y-m-d');
-        $end_date = !is_null($request->date_range) ? date('Y-m-d', strtotime($date_range[1])) : date('Y-m-d');
 
-        $data = array();
-        if ($request->has('filter')) {
-            $data = AccountTransaction::with('coa')
-                ->where('voucher_date', '>=', $start_date)
-                ->where('voucher_date', '<=', $end_date)
-                ->where(function ($q) {
-                    $q->where('coa_head_code', 'LIKE', '10103%')
-                        ->orWhere('coa_head_code', 'LIKE', '10102%');
-                })
-                ->groupBy('coa_setup_id')
-                ->select('coa_head_code', 'coa_setup_id', DB::raw('SUM(debit_amount) as debit_amount'), DB::raw('SUM(credit_amount) as credit_amount'))
-                ->get();
-        }
+        $start_date = date('Y-m-d', strtotime(trim($date_range[0])));
 
-        if (!is_null($request->print)) {
-            $report_title = 'Receive Payment Report <br> <span class="text-sm">' . date('d-m-Y', strtotime($start_date)) . ' To ' . date('d-m-Y', strtotime($end_date)) . '</span>';
-            $pdf = Pdf::loadView('admin.reports.recieve_payment.print', compact('report_title', 'data'));
-            return $pdf->stream('recieve_payment_' . date('d_m_Y_h_i_s') . '.pdf');
-        }
-
-        $title = 'Receive Payment Report';
-        $buttons = '<button type="button" class="btn btn-sm btn-primary text-uppercase getPdf">Print</button><button type="submit" class="btn btn-sm btn-primary text-uppercase" id="filter_btn">Search</button>';
-        $filter_link = Route('admin.receive-payment.index');
-        return view('admin.reports.recieve_payment.index', compact('title', 'start_date', 'end_date', 'data', 'buttons', 'filter_link'));
+        $end_date = isset($date_range[1])
+            ? date('Y-m-d', strtotime(trim($date_range[1])))
+            : $start_date;
     }
 
+    // Transaction Query
+    $query = AccountTransaction::with('coa')
+        ->whereIn('voucher_type',['Salary','Loan','Installment'])
+        ->whereDate('voucher_date', '>=', $start_date)
+        ->whereDate('voucher_date', '<=', $end_date);
+
+    // Head Filter
+    if ($request->filled('coa_setup_id')) {
+        $query->where('coa_setup_id', $request->coa_setup_id);
+    }
+    // Employee Filter
+    if ($request->filled('employee_id') && $payment_no) {
+        $query->whereIn('voucher_no', $payment_no);
+    }
+
+    // Transaction Data
+    $data = $query
+        ->select(
+            'narration',
+            'voucher_date',
+            DB::raw('SUM(debit_amount) as debit_amount'),
+            DB::raw('SUM(credit_amount) as credit_amount')
+        )
+        ->groupBy('narration','voucher_date')
+        ->orderBy('voucher_date','desc')
+        ->get();
+
+        
+    $credit_amount = $data->sum('credit_amount');
+    $debit_amount = $data->sum('debit_amount');
+
+    // Excel Export
+    if ($request->filled('export')) {
+        return response()->streamDownload(function () use ($data, $credit_amount, $debit_amount) {
+
+            $file = fopen('php://output', 'w');
+
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($file, [
+                'SL',
+                'Transaction Date',
+                'Head Name',
+                'debit_amount',
+                'credit_amount'
+            ]);
+
+            foreach ($data as $key => $row) {
+
+                fputcsv($file, [
+                    $key + 1,
+                    $row->voucher_date ?? '',
+                    $row->narration ?? '',
+                    $row->debit_amount,
+                    $row->credit_amount
+                ]);
+            }
+
+            fputcsv($file, []);
+
+            fputcsv($file, [
+                '',
+                '',
+                'Total Transaction',
+                $debit_amount,
+                $credit_amount
+            ]);
+
+            fclose($file);
+
+        }, 'employee_statement_' . date('d_m_Y_H_i_s') . '.csv');
+    }
+
+    
+    $heads = CoaSetup::orderBy('head_code')->get();
+
+    $title = 'Employee Statement Report';
+
+    $buttons = '
+        <button type="button" class="btn btn-sm btn-success" id="export_excel">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+
+        <button type="submit" class="btn btn-sm btn-primary" id="filter_btn">
+            <i class="fas fa-search"></i> Search
+        </button>
+    ';
+
+    $filter_link = route('admin.employee.statement.index');
+
+    return view(
+        'admin.reports.employee_statement.index',
+        compact(
+            'title',
+            'employees',
+            'start_date',
+            'end_date',
+            'data',
+            'debit_amount',
+            'credit_amount',
+            'heads',
+            'buttons',
+            'filter_link'
+        )
+    );
+}
+
+
+public function receivePayment(Request $request)
+{
+    // Default Date
+    $start_date = date('Y-m-d');
+    $end_date = date('Y-m-d');
+
+    // Date Range Filter
+    if ($request->filled('date_range')) {
+
+        $date_range = explode('to', $request->date_range);
+
+        $start_date = date('Y-m-d', strtotime(trim($date_range[0])));
+
+        $end_date = isset($date_range[1])
+            ? date('Y-m-d', strtotime(trim($date_range[1])))
+            : $start_date;
+    }
+
+    // Receive Query
+    $query = Collection::with('coa')
+        ->whereDate('payment_date', '>=', $start_date)
+        ->whereDate('payment_date', '<=', $end_date);
+
+    // Head Filter
+    if ($request->filled('coa_setup_id')) {
+        $query->where('coa_setup_id', $request->coa_setup_id);
+    }
+
+    // Only Receive Data
+    // আপনার collection_type-এর প্রকৃত Receive value এখানে বসাবেন।
+    $data = $query
+        ->select(
+            'coa_setup_id',
+            DB::raw('SUM(amount) as total_amount')
+        )
+        ->groupBy('coa_setup_id')
+        ->orderBy('coa_setup_id')
+        ->get();
+
+    $total_amount = $data->sum('total_amount');
+
+    // Excel Export
+    if ($request->filled('export')) {
+        return response()->streamDownload(function () use ($data, $total_amount) {
+
+            $file = fopen('php://output', 'w');
+
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($file, [
+                'SL',
+                'Head Code',
+                'Head Name',
+                'Amount'
+            ]);
+
+            foreach ($data as $key => $row) {
+
+                fputcsv($file, [
+                    $key + 1,
+                    $row->coa->head_code ?? '',
+                    $row->coa->head_name ?? '',
+                    $row->total_amount
+                ]);
+            }
+
+            fputcsv($file, []);
+
+            fputcsv($file, [
+                '',
+                '',
+                'Total Receive',
+                $total_amount
+            ]);
+
+            fclose($file);
+
+        }, 'receive_collection_' . date('d_m_Y_H_i_s') . '.csv');
+    }
+
+    
+    $heads = CoaSetup::orderBy('head_code')->get();
+
+    $title = 'Receive Collection Report';
+
+    $buttons = '
+        <button type="button" class="btn btn-sm btn-success" id="export_excel">
+            <i class="fas fa-file-excel"></i> Excel
+        </button>
+
+        <button type="submit" class="btn btn-sm btn-primary" id="filter_btn">
+            <i class="fas fa-search"></i> Search
+        </button>
+    ';
+
+    $filter_link = route('admin.receive-payment.index');
+
+    return view(
+        'admin.reports.recieve_payment.index',
+        compact(
+            'title',
+            'start_date',
+            'end_date',
+            'data',
+            'total_amount',
+            'heads',
+            'buttons',
+            'filter_link'
+        )
+    );
+}
     public function receivePaymentHeadDetails(Request $request)
     {
         $title = 'Head Transactions';

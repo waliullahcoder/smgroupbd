@@ -30,7 +30,7 @@ class VoucherApproveController extends Controller
                     SUM(debit_amount) as debit_amount,
                     SUM(credit_amount) as credit_amount
                 ')
-                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV', 'Salary'])
+                ->whereIn('voucher_type', ['Purchase', 'Collection', 'Expense', 'JV', 'Salary', 'Loan', 'Installment'])
                 ->where('approve', 0)
                 ->groupBy('company_id', 'voucher_type', 'voucher_no')
                 ->orderByRaw('MAX(id) DESC');

@@ -3,24 +3,7 @@
 @section('form')
     <input type="hidden" name="print" value="">
     <div class="row g-3">
-        <div class="col-lg-3 col-md-4 col-sm-6">
-            <label for="report_type" class="form-label"><b>Report Type</b></label>
-            <select name="report_type" id="report_type" class="form-select select" data-placeholder="Report Type">
-                <option value="history" {{ $report_type == 'history' ? 'selected' : '' }}>History</option>
-                <option value="product_summary" {{ $report_type == 'product_summary' ? 'selected' : '' }}>Product Summary
-                </option>
-                <option value="client_summary" {{ $report_type == 'client_summary' ? 'selected' : '' }}>Client Summary
-                </option>
-            </select>
-        </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-            <label for="sales_type" class="form-label"><b>Sales Type</b></label>
-            <select name="sales_type" id="sales_type" class="form-select select" data-placeholder="Sales Type">
-                <option value="credit" {{ request('sales_type') == 'credit' ? 'selected' : '' }}>Regular</option>
-                <option value="sample" {{ request('sales_type') == 'sample' ? 'selected' : '' }}>Sample</option>
-                <option value="POS" {{ request('sales_type') == 'POS' ? 'selected' : '' }}>POS</option>
-            </select>
-        </div>
+        
         <div class="col-lg-3 col-md-4 col-sm-6">
             <label for="date_range" class="form-label"><b>Date</b></label>
             <input type="text" class="form-control date-range" name="date_range" id="date_range"
@@ -40,30 +23,9 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-sm-6">
-            <label for="store_id" class="form-label"><b>Store</b></label>
-            <select name="store_id" id="store_id" class="form-select select" data-placeholder="Select Store">
-                <option value=""></option>
-                @foreach ($stores as $store)
-                    <option value="{{ $store->id }}" {{ $store->id == $store_id ? 'selected' : '' }}>
-                        {{ $store->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-sm-6">
-            <label for="staff_id" class="form-label"><b>Staff</b></label>
-            <select name="staff_id[]" id="staff_id" class="form-select select" data-placeholder="Select Staff" multiple>
-                <option value=""></option>
-                @foreach ($staffs as $staff)
-                    <option value="{{ $staff->id }}"
-                        {{ is_array($staff_id) && in_array($staff->id, $staff_id) ? 'selected' : '' }}>
-                        {{ $staff->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-sm-6">
+       
+        
+        <div class="col-lg-3 col-md-4 col-sm-6">
             <label for="client_id" class="form-label"><b>Client</b></label>
             <select name="client_id[]" id="client_id" class="form-select select" data-placeholder="Select Client" multiple>
                 <option value=""></option>
@@ -75,7 +37,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-sm-6">
+        <div class="col-lg-3 col-md-4 col-sm-6">
             <label for="product_id" class="form-label"><b>Product</b></label>
             <select name="product_id[]" id="product_id" class="form-select select" data-placeholder="Select Product"
                 multiple>

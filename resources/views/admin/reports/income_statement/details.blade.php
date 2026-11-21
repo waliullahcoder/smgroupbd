@@ -26,7 +26,7 @@
                                 <th class="text-center" width="30">SL#</th>
                                 <th>Voucher No.</th>
                                 <th>Date</th>
-                                <th>Head Name</th>
+                                <th>Head Name (Details)</th>
                                 <th>Head Code</th>
                                 <th class="text-end">Debit Amount</th>
                                 <th class="text-end">Credit Amount</th>
@@ -42,7 +42,7 @@
                                     <td class="text-center" width="30">{{ $loop->iteration }}</td>
                                     <td>{{ $row->voucher_no }}</td>
                                     <td>{{ date('d-m-Y', strtotime($row->voucher_date)) }}</td>
-                                    <td>{{ @$row->coa->head_name }}</td>
+                                    <td>{{ @$row->coa->head_name }} ({{ @$row->narration }})</td>
                                     <td>{{ @$row->coa->head_code }}</td>
                                     <td class="text-end">{{ number_format($row->debit_amount, 2, '.', ',') }}</td>
                                     <td class="text-end">{{ number_format($row->credit_amount, 2, '.', ',') }}</td>

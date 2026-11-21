@@ -3,23 +3,7 @@
 @section('form')
     <input type="hidden" name="print" value="">
     <div class="row g-3">
-        <div class="col-md-4 col-sm-6">
-            <label for="report_type" class="form-label"><b>Report Type</b></label>
-            <select name="report_type" id="report_type" class="form-select select" data-placeholder="Report Type">
-                <option value="history" {{ $report_type == 'history' ? 'selected' : '' }}>History</option>
-                <option value="summary" {{ $report_type == 'summary' ? 'selected' : '' }}>Summary</option>
-            </select>
-        </div>
-        <div class="col-md-4 col-sm-6">
-            <label for="collection_type" class="form-label"><b>Collection Type</b></label>
-            <select name="collection_type" id="collection_type" class="form-select select"
-                data-placeholder="Collection Type">
-                <option value=""></option>
-                <option value="advance" {{ $collection_type == 'advance' ? 'selected' : '' }}>Advance</option>
-                <option value="adjust" {{ $collection_type == 'adjust' ? 'selected' : '' }}>Adjustment</option>
-                <option value="collection" {{ $collection_type == 'collection' ? 'selected' : '' }}>Collection</option>
-            </select>
-        </div>
+        
         <div class="col-md-4 col-sm-6">
             <label for="date_range" class="form-label"><b>Date</b></label>
             <input type="text" class="form-control date-range" name="date_range" id="date_range"

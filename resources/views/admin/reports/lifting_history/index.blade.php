@@ -3,21 +3,8 @@
 @section('form')
     <input type="hidden" name="print" value="">
     <div class="row g-3">
-        <div class="col-md-4 col-sm-6">
-            <label for="report_type" class="form-label"><b>Report Type</b></label>
-            <select name="report_type" id="report_type" class="form-select select" data-placeholder="Report Type">
-                <option value="history" {{ $report_type == 'history' ? 'selected' : '' }}>History</option>
-                <option value="summary" {{ $report_type == 'summary' ? 'selected' : '' }}>Summary</option>
-            </select>
-        </div>
-        {{-- <div class="col-md-4 col-sm-6">
-            <label for="product_type" class="form-label"><b>Product Type</b></label>
-            <select name="product_type" id="product_type" class="form-select select" data-placeholder="Product Type">
-                <option value="Consumer" {{ request('product_type') == 'Consumer' ? 'selected' : '' }}>Consumer</option>
-                <option value="Fashion" {{ request('product_type') == 'Fashion' ? 'selected' : '' }}>Fashion</option>
-            </select>
-        </div> --}}
-        <div class="col-md-4 col-sm-6">
+        
+        <div class="col-md-3 col-sm-6">
             <label for="vendor_id" class="form-label"><b>Vendor</b></label>
             <select name="vendor_id[]" id="vendor_id" class="form-select select" data-placeholder="Select Vendor" multiple>
                 <option value=""></option>
@@ -28,25 +15,15 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4 col-sm-6">
-            <label for="store_id" class="form-label"><b>Store</b></label>
-            <select name="store_id" id="store_id" class="form-select select" data-placeholder="Select Store">
-                <option value=""></option>
-                @foreach ($stores as $store)
-                    <option value="{{ $store->id }}" {{ $store->id == $store_id ? 'selected' : '' }}>
-                        {{ $store->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-4 col-sm-6">
+        
+        <div class="col-md-3 col-sm-6">
             <label for="date_range" class="form-label"><b>Date</b></label>
             <input type="text" class="form-control date-range" name="date_range" id="date_range"
                 placeholder="Select Date Range" data-time-picker="true" data-format="DD-MM-Y"
                 data-separator=" to " autocomplete="off" required
                 value="{{ date('d-m-Y', strtotime($start_date)) . ' to ' . date('d-m-Y', strtotime($end_date)) }}">
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <label for="category_id" class="form-label"><b>Category</b></label>
             <select name="category_id[]" id="category_id" class="form-select select" data-placeholder="Select Category"
                 multiple>
@@ -58,7 +35,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <label for="product_id" class="form-label"><b>Products</b></label>
             <select name="product_id[]" id="product_id" class="form-select select" data-placeholder="Select Product"
                 multiple>

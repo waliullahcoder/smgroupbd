@@ -27,6 +27,7 @@
                 <tr>
 
                     <th width="50">SL</th>
+                    <th>PAYMENT NO.</th>
                     <th>Employee ID</th>
                     <th>Employee Name</th>
                     <th>Loan Type</th>
@@ -34,7 +35,6 @@
                     <th>Year</th>
                     <th>Loan Amount</th>
                     <th>Installment Amount</th>
-                    <th>Total Installment</th>
                     <th>Loan Date</th>
                     <th>Status</th>
                     <th width="120">Action</th>
@@ -69,7 +69,7 @@ $('.dataTable').DataTable({
                 className: 'btn btn-success btn-sm',
                 title: 'Loan List',
                 exportOptions: {
-                    columns: [0,1,2,3,4,5,6,7,8,9]
+                    columns: [0,1,2,3,4,5,6,7,8,9,10]
                 }
             }
         ],
@@ -85,6 +85,7 @@ $('.dataTable').DataTable({
             return meta.row + meta.settings._iDisplayStart + 1;
         }
     },
+    {data:'loan_no',name:'el.loan_no'},
     {data:'employee_code',name:'e.code'},
     {data:'name',name:'e.name'},
     {data:'loan_type',name:'el.loan_type'},
@@ -92,7 +93,6 @@ $('.dataTable').DataTable({
     {data:'payroll_year',name:'el.payroll_year'},
     {data:'loan_amount',name:'el.loan_amount'},
     {data:'installment_amount',name:'el.installment_amount'},
-    {data:'total_installments',name:'el.total_installments'},
     {data:'loan_date',name:'el.loan_date'},
     {data:'status',name:'el.status',searchable:false},
     {data:'actions',orderable:false,searchable:false}

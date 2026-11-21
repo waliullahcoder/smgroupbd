@@ -458,6 +458,7 @@ Route::group(['as' => 'admin.', 'prefix' => 'admin', 'middleware' => ['admin_per
     Route::get('/balance-sheet', [ReportController::class, 'balanceSheet'])->name('balance-sheet.index');
     Route::get('/head-details', [ReportController::class, 'headDetails'])->name('head-details.index');
     Route::get('/receive-payment', [ReportController::class, 'receivePayment'])->name('receive-payment.index');
+    Route::get('/employee-statement', [ReportController::class, 'employeeStatement'])->name('employee.statement.index');
     Route::get('/receive-payment-head-details', [ReportController::class, 'receivePaymentHeadDetails'])->name('receive-payment-head-details.index');
     Route::match(['get', 'post'], '/generate-barcode', [ReportController::class, 'generateBarcode'])->name('generate-barcode.index');
     Route::get('/product-search', [ReportController::class, 'productSearch'])->name('product.search');

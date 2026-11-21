@@ -197,10 +197,10 @@ class SalesHistoryDataTable extends DataTable
                         'extend'  => 'excel',
                         'text'    => '<i class="fal fa-file-spreadsheet"></i> Exel',
                     ],
-                    [
-                        'text'    => '<i class="fal fa-file-pdf"></i> Print',
-                        'className' => 'getPdf',
-                    ],
+                    // [
+                    //     'text'    => '<i class="fal fa-file-pdf"></i> Print',
+                    //     'className' => 'getPdf',
+                    // ],
                 ],
                 'responsive' => true,
                 'drawCallback' => 'function() {
@@ -262,12 +262,12 @@ class SalesHistoryDataTable extends DataTable
                 'title'     => 'Code',
                 'class'     => 'text-nowrap',
             ]),
-            Column::make([
-                'data'      => 'attribute_name',
-                'name'      => 'attribute_name',
-                'title'     => 'UOM',
-                'class'     => 'text-nowrap',
-            ]),
+            // Column::make([
+            //     'data'      => 'attribute_name',
+            //     'name'      => 'attribute_name',
+            //     'title'     => 'UOM',
+            //     'class'     => 'text-nowrap',
+            // ]),
             Column::make([
                 'data'      => 'qty',
                 'name'      => 'qty',
@@ -288,18 +288,18 @@ class SalesHistoryDataTable extends DataTable
                 'class'     => 'text-nowrap',
                 'footer'    => '<span id="total_amount"></span>',
             ]),
-            Column::make([
-                'data'      => 'sales_type',
-                'name'      => 'sales_type',
-                'title'     => 'Sales Type',
-                'class'     => 'text-nowrap',
-            ]),
-            Column::make([
-                'data'      => 'staff_name',
-                'name'      => 'staff_name',
-                'title'     => 'Staff',
-                'class'     => 'text-nowrap',
-            ]),
+            // Column::make([
+            //     'data'      => 'sales_type',
+            //     'name'      => 'sales_type',
+            //     'title'     => 'Sales Type',
+            //     'class'     => 'text-nowrap',
+            // ]),
+            // Column::make([
+            //     'data'      => 'staff_name',
+            //     'name'      => 'staff_name',
+            //     'title'     => 'Staff',
+            //     'class'     => 'text-nowrap',
+            // ]),
         ];
     }
 
